@@ -176,7 +176,7 @@
             // 1. Logic to calculate what is due in the next 90 days
             const urgentReminders = React.useMemo(() => {
                 // SAFETY GUARD: If machine or components are missing, stop here
-                if (!machine || !machine.components) return [];
+                if (!machine?.components) return [];
             
                 const today = new Date();
                 const ninetyDaysFromNow = new Date();
@@ -1161,24 +1161,42 @@
                         });
                     }
                 };
+                
                 fetchData();
             }, []);
+
+            const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
+
+            React.useEffect(() => {
+                // Only trigger if data is loaded, alarms exist, AND we haven't shown it yet this session
+                if (machine && urgentReminders?.length > 0 && !hasInitialPopUpShown) {
+                    setShowAlarmPopup(true);
+                    setHasInitialPopUpShown(true); // Mark as shown
+                }
+            }, [machine, urgentReminders, hasInitialPopUpShown]);
         
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                setMachine(newData); // Update the screen immediately
+                // 1. Update the UI screen immediately
+                setMachine(newData); 
             
+                // 2. Send to Supabase
                 try {
                     const { error } = await supabaseClient
                         .from('machine_data')
-                        .upsert(newData) // This saves the exact object you built in handleSave
+                        .upsert({
+                            serialNumber: 'FX000001',
+                            lastPMDate: newData.lastPMDate,
+                            nextPMDue: newData.nextPMDue,
+                            components: newData.components,
+                            maintenanceHistory: newData.maintenanceHistory
+                        })
                         .eq('serialNumber', 'FX000001');
-            
+                        
                     if (error) throw error;
-                    console.log("Saved to Cloud!");
+                    console.log("Successfully saved to cloud!");
                 } catch (err) {
-                    console.error("Save Error:", err.message);
-                    alert("Cloud Save Failed: Check your RLS Policy settings.");
+                    console.error("Save failed:", err.message);
                 }
             };
         
@@ -1320,6 +1338,7 @@
 </body>
 
 </html>
+
 
 
 
