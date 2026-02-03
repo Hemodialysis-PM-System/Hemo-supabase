@@ -736,7 +736,7 @@
                 const isNoFault = editData.faultCode && editData.faultCode.toLowerCase() === "no fault found";
 
                 // 1. Update the machine state with new PM info
-                const updatedData({
+                const updatedData = {
                     ...editData,
                     safetyTestStatus: checklist.safetyTest,
                     maintenanceHistory: [{
@@ -760,7 +760,7 @@
                     }, ...(machine.maintenanceHistory || [])],
                     lastPMDate: dateString,
                     nextPMDue: new Date(new Date().setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0]
-                });
+                };
 
                 onUpdateMachine(updatedData);
                 
@@ -1255,6 +1255,7 @@
 </body>
 
 </html>
+
 
 
 
