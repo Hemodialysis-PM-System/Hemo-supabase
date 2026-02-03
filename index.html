@@ -1088,8 +1088,8 @@
         //this should be the device overview page
         const App = () => {
             // 1. Initialize state. We start with the default data.
-            const [machineData, setMachineData] = React.useState(initialMachineData);
-            const [activeView, setActiveView] = React.useState(VIEWS.HOME);
+            const [machine, setMachine] = React.useState(initialMachineData);
+            const [view, setView] = React.useState(VIEWS.HOME);
             const [showAlarmPopup, setShowAlarmPopup] = React.useState(false);
 
             // 2. Load data from Supabase when the app opens
@@ -1101,9 +1101,9 @@
                             .select('*')
                             .eq('serialNumber', 'FX000001')
                             .single();
-
+            
                         if (data && !error) {
-                            setMachineData(data);
+                            setMachine(data); // Changed machineData to machine
                         }
                     } catch (err) {
                         console.error("Connection error:", err);
@@ -1114,7 +1114,7 @@
 
             // 3. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                setMachineData(newData); // Update screen immediately
+                setMachine(newData); // Changed machineData to machine
                 try {
                     const { error } = await supabaseClient
                         .from('machine_data')
@@ -1158,8 +1158,8 @@
                 });
                 return items;
             }, [machine]);
-            const [isSidebarOpen, setSidebarOpen] = useState(false);
-            const [history, setHistory] = useState([]);
+            const [isSidebarOpen, setSidebarOpen] = React.useState(false);
+            const [history, setHistory] = React.useState([]);
 
             const handleViewChange = (v) => { setHistory([...history, view]); setView(v); setSidebarOpen(false); };
             const goBack = () => { if (history.length > 0) { const prev = history[history.length - 1]; setHistory(history.slice(0, -1)); setView(prev); } };
@@ -1255,8 +1255,8 @@
                                 )}                                
                                 {view === VIEWS.EXPIRATION && (
                                     <ExpirationView 
-                                        components={machineData.components} 
-                                        onUpdateAll={(newComponents) => onUpdateMachine({ ...machineData, components: newComponents })} 
+                                        components={machine.components} 
+                                        onUpdateAll={(newComponents) => onUpdateMachine({ ...machine, components: newComponents })} 
                                     />
                                 )}                            
                             </div>
@@ -1305,4 +1305,5 @@
         root.render(<App />);
     </script>
 </body>
+
 </html>
