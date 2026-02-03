@@ -1118,19 +1118,24 @@
             };
         
             // 3. Priority Alarm Logic
+            //pop up alarm that show components overdue or 90 days before deadline
             const priorityAlarms = React.useMemo(() => {
+                if (!machine || !machine.components) return [];
                 const today = new Date();
-                const ninetyDaysFromNow = new Date();
-                ninetyDaysFromNow.setDate(today.getDate() + 90);
-        
+                const fourteenDaysFromNow = new Date();
+                fourteenDaysFromNow.setDate(today.getDate() + 90);
+
                 const items = [];
-                if (new Date(machine.nextPMDue) <= ninetyDaysFromNow) {
+                // Check PM
+                if (new Date(machine.nextPMDue) <= fourteenDaysFromNow) {
                     items.push({ label: 'Preventive Maintenance', date: machine.nextPMDue });
                 }
+                // Check Components
                 machine.components.forEach(c => {
-                    const nextDate = new Date(c.expiryDate);
-                    if (nextDate <= ninetyDaysFromNow) {
-                        items.push({ label: c.label, date: c.expiryDate });
+                    const nextDate = new Date(c.lastRepairedDate);
+                    nextDate.setFullYear(nextDate.getFullYear() + 4);
+                    if (nextDate <= fourteenDaysFromNow) {
+                        items.push({ label: `${c.name}`, date: nextDate.toISOString().split('T')[0] });
                     }
                 });
                 return items;
@@ -1180,6 +1185,7 @@
                     </header>
         
                     <div className="max-w-7xl mx-auto w-full p-4 lg:flex gap-8 flex-1">
+                        {/* sidebar */}
                         <aside className={`lg:w-64 w-full bg-white rounded-md shadow-sm border border-gray-100 p-3 lg:h-fit sticky lg:top-20 z-20 ${isSidebarOpen ? 'block' : 'hidden lg:block'}`}>
                             <nav className="space-y-1">
                                 {navItems.map(item => (
@@ -1191,6 +1197,7 @@
                             </nav>
                         </aside>
         
+                        {/* BACK BUTTON */}
                         <main className="flex-1 mt-4 lg:mt-0">
                             {history.length > 0 && (
                                 <button onClick={goBack} className="text-[10px] font-bold text-indigo-600 mb-4 flex items-center hover:underline uppercase tracking-widest print:hidden">
@@ -1239,5 +1246,6 @@
 </body>
 
 </html>
+
 
 
