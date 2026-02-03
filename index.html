@@ -1103,28 +1103,18 @@
                             .select('*')
                             .eq('serialNumber', 'FX000001')
                             .single();
-        
-                        if (data && !error) {
-                            setMachine(data);
-                        }
-                    } catch (err) {
-                        console.error("Connection error:", err);
-                    }
+                        if (data && !error) setMachine(data);
+                    } catch (err) { console.error("Database Connection failed:", err); }
                 }
                 loadData();
             }, []);
         
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                setMachine(newData); 
+                setMachine(newData);
                 try {
-                    const { error } = await supabaseClient
-                        .from('machine_data')
-                        .upsert(newData);
-                    if (error) console.error("Save error:", error.message);
-                } catch (err) {
-                    console.error("Network error:", err);
-                }
+                    await supabaseClient.from('machine_data').upsert(newData);
+                } catch (err) { console.error("Save Error:", err); }
             };
         
             // 3. Priority Alarm Logic
@@ -1164,7 +1154,9 @@
                     setView(prev); 
                 } 
             };
-        
+
+            if (!machine) return <div className="p-20 text-center">Loading Machine Data...</div>;
+            
             const navItems = [
                 { id: VIEWS.HOME, label: 'Overview', icon: icons.Home },
                 { id: VIEWS.HISTORY, label: 'PM History', icon: icons.History },
@@ -1247,4 +1239,5 @@
 </body>
 
 </html>
+
 
