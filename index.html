@@ -1111,17 +1111,22 @@
         
             // 1. Load data from Supabase when the app opens
             React.useEffect(() => {
-                async function loadData() {
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('machine_data')
-                            .select('*')
-                            .eq('serialNumber', 'FX000001')
-                            .single();
-                        if (data && !error) setMachine(data);
-                    } catch (err) { console.error("Database Connection failed:", err); }
-                }
-                loadData();
+                const fetchData = async () => {
+                    const { data, error } = await supabaseClient
+                        .from('machine_data')
+                        .select('*')
+                        .eq('serialNumber', 'FX000001')
+                        .single();
+            
+                    // ONLY update the state if data actually exists in Supabase
+                    if (data) {
+                        setMachine(data);
+                    } else {
+                        // If table is empty, save the INITIAL_MACHINE_DATA to Supabase once
+                        onUpdateMachine(INITIAL_MACHINE_DATA);
+                    }
+                };
+                fetchData();
             }, []);
         
             // 2. The function that saves every change to the cloud
