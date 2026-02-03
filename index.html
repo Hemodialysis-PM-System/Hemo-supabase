@@ -1126,31 +1126,19 @@
         
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                if (!newData) return;
-            
-                // 1. Update the UI screen immediately
-                setMachine(newData); 
-            
-                // 2. Prepare the data using your exact screenshot names
-                const databaseReadyData = {
-                    serialNumber: newData.serialNumber || 'FX000001',
-                    machineType: newData.machineType,
-                    lastPMDate: newData.lastPMDate,
-                    nextPMDue: newData.nextPMDue,
-                    components: newData.components,
-                    maintenanceHistory: newData.maintenanceHistory
-                };
+                setMachine(newData); // Update the screen immediately
             
                 try {
                     const { error } = await supabaseClient
                         .from('machine_data')
-                        .upsert(databaseReadyData) 
-                        .eq('serialNumber', databaseReadyData.serialNumber);
-                        
+                        .upsert(newData) // This saves the exact object you built in handleSave
+                        .eq('serialNumber', 'FX000001');
+            
                     if (error) throw error;
-                    console.log("Cloud Sync Successful!");
+                    console.log("Saved to Cloud!");
                 } catch (err) {
-                    console.error("Database Save Error:", err.message);
+                    console.error("Save Error:", err.message);
+                    alert("Cloud Save Failed: Check your RLS Policy settings.");
                 }
             };
         
@@ -1184,10 +1172,11 @@
                 return items;
             }, [machine]);
         
-            // This "Watcher" makes the popup appear when alarms are found
             React.useEffect(() => {
-                if (priorityAlarms.length > 0) setShowAlarmPopup(true);
-            }, [priorityAlarms.length]);
+                if (priorityAlarms && priorityAlarms.length > 0) {
+                    setShowAlarmPopup(true);
+                }
+            }, [machine, priorityAlarms.length]); // Triggers when machine data arrives
         
             // Navigation logic
             const handleViewChange = (v) => { 
@@ -1291,6 +1280,7 @@
 </body>
 
 </html>
+
 
 
 
