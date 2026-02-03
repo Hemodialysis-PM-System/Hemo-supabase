@@ -664,9 +664,9 @@
             React.useEffect(() => {
                 if (isEditing) {
                     setEditData({
-                        faultCode: machine.faultCode || "Others",
-                        subFaultCode: machine.subFaultCode || "",
-                        resolutionCode: machine.resolutionCode || "",
+                        faultCode: machine.faultCode || "--Select fault code--",
+                        subFaultCode: machine.subFaultCode || "--Select detail--",
+                        resolutionCode: machine.resolutionCode || "--Select resolution--",
                     });
                     // Add this to keep the checklist in sync
                     setChecklist(prev => ({
@@ -1291,6 +1291,7 @@
 </body>
 
 </html>
+
 
 
 
