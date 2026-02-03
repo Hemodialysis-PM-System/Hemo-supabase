@@ -736,7 +736,7 @@
                 const isNoFault = editData.faultCode && editData.faultCode.toLowerCase() === "no fault found";
 
                 // 1. Update the machine state with new PM info
-                onUpdateMachine({
+                const updatedData({
                     ...editData,
                     safetyTestStatus: checklist.safetyTest,
                     maintenanceHistory: [{
@@ -762,6 +762,8 @@
                     nextPMDue: new Date(new Date().setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0]
                 });
 
+                onUpdateMachine(updatedData);
+                
                 // 2. THE AUTOMATIC NAME TRICK
                 // Store the original title so we can change it back later
                 const originalTitle = document.title;
@@ -776,7 +778,7 @@
                     // Change the title back to normal after the print dialog opens
                     document.title = originalTitle;
                     setIsEditing(false);
-                }, 300);
+                }, 500);
 
                 alert("PM Report data saved. Dashboard updated to 1-year interval");
             };
@@ -1111,36 +1113,43 @@
         
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                setMachine(newData);
+                if (!newData) return; // Prevent crashing on empty data
+                
+                setMachine(newData); // Update the screen immediately
+            
                 try {
-                    await supabaseClient.from('machine_data').upsert(newData);
-                } catch (err) { console.error("Save Error:", err); }
+                    const { error } = await supabaseClient
+                        .from('machine_data')
+                        .upsert(newData);
+                    if (error) throw error;
+                } catch (err) {
+                    console.error("Supabase Save Error:", err.message);
+                }
             };
         
             // 3. Priority Alarm Logic
             //pop up alarm that show components overdue or 90 days before deadline
             const priorityAlarms = React.useMemo(() => {
                 if (!machine || !machine.components) return [];
-                const today = new Date();
-                const fourteenDaysFromNow = new Date();
-                fourteenDaysFromNow.setDate(today.getDate() + 90);
-
+                
+                const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+                const now = new Date();
                 const items = [];
-                // Check PM
-                if (new Date(machine.nextPMDue) <= fourteenDaysFromNow) {
-                    items.push({ label: 'Preventive Maintenance', date: machine.nextPMDue });
+                
+                // Check PM Due date
+                if (machine.nextPMDue && (new Date(machine.nextPMDue) - now <= ninetyDays)) {
+                    items.push({ label: 'Preventive Maintenance Due', date: machine.nextPMDue });
                 }
                 // Check Components
                 machine.components.forEach(c => {
-                    const nextDate = new Date(c.lastRepairedDate);
-                    nextDate.setFullYear(nextDate.getFullYear() + 4);
-                    if (nextDate <= fourteenDaysFromNow) {
-                        items.push({ label: `${c.name}`, date: nextDate.toISOString().split('T')[0] });
+                    if (c.expiryDate && (new Date(c.expiryDate) - now <= ninetyDays)) {
+                        items.push({ label: c.name || c.label, date: c.expiryDate });
                     }
                 });
                 return items;
             }, [machine]);
         
+            // This "Watcher" makes the popup appear when alarms are found
             React.useEffect(() => {
                 if (priorityAlarms.length > 0) setShowAlarmPopup(true);
             }, [priorityAlarms.length]);
@@ -1246,6 +1255,7 @@
 </body>
 
 </html>
+
 
 
 
