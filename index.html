@@ -157,26 +157,32 @@
         const HomeView = ({ machine, onViewChange }) => {
             // 1. Logic to calculate what is due in the next 90 days
             const urgentReminders = React.useMemo(() => {
+                // SAFETY GUARD: If machine or components are missing, stop here
+                if (!machine || !machine.components) return [];
+            
                 const today = new Date();
-                const thirtyDaysFromNow = new Date();
-                thirtyDaysFromNow.setDate(today.getDate() + 30);
-                const ninetyDaysFromNow = new Date(); //warning window
+                const ninetyDaysFromNow = new Date();
                 ninetyDaysFromNow.setDate(today.getDate() + 90);
-
+            
                 const items = [];
-                // Check PM
-                if (new Date(machine.nextPMDue) <= ninetyDaysFromNow) {
-                    items.push({ label: 'Preventive Maintenance', date: machine.nextPMDue, type: 'PM' });
+            
+                // Check PM Date (Fixes Problem 1)
+                if (machine.nextPMDue) {
+                    const pmDate = new Date(machine.nextPMDue);
+                    if (pmDate <= ninetyDaysFromNow) {
+                        items.push({ label: 'Preventive Maintenance', date: machine.nextPMDue, type: 'PM' });
+                    }
                 }
                 
-                // Check Battery Expirations (4-year cycle)
+                // Check Battery Expirations
                 machine.components.forEach(c => {
+                    if (!c.lastRepairedDate) return; // Skip if date is missing
                     const nextDate = new Date(c.lastRepairedDate);
-                    nextDate.setFullYear(nextDate.getFullYear() + 4);
+                    nextDate.setFullYear(nextDate.getFullYear() + (c.intervalYears || 4));
                     
                     if (nextDate <= ninetyDaysFromNow) {
                         items.push({ 
-                            label: `${c.name}`, 
+                            label: c.name, 
                             date: nextDate.toISOString().split('T')[0] 
                         });
                     }
@@ -322,9 +328,16 @@
         };
 
         const HistoryView = ({ history, onUpdateMachine, machine }) => {
-            const formatDate = (dateStr) => {
-                const d = new Date(dateStr);
-                return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            const formatDate = (dateString) => {
+                if (!dateString) return "---"; // Returns dashes if database is empty
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return "---"; // Returns dashes if date is invalid
+                
+                return date.toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
             };
 
             const handleRowUpload = async (event, index) => {
@@ -1120,10 +1133,12 @@
             
                     // ONLY update the state if data actually exists in Supabase
                     if (data) {
-                        setMachine(data);
-                    } else {
-                        // If table is empty, save the INITIAL_MACHINE_DATA to Supabase once
-                        onUpdateMachine(INITIAL_MACHINE_DATA);
+                        // Ensure components and history are at least empty arrays so code doesn't crash
+                        setMachine({
+                            ...data,
+                            components: data.components || [],
+                            maintenanceHistory: data.maintenanceHistory || []
+                        });
                     }
                 };
                 fetchData();
@@ -1285,6 +1300,7 @@
 </body>
 
 </html>
+
 
 
 
