@@ -329,27 +329,40 @@
 
             const handleRowUpload = async (event, index) => {
                 const file = event.target.files[0];
-                if (file) {
-                    // 1. Upload the file to your 'reports' bucket in Supabase
-                    const { data, error } = await supabaseClient.storage
+                if (!file) return;
+            
+                try {
+                    // 1. Upload to Supabase Storage
+                    const fileName = `public/${Date.now()}_${file.name}`;
+                    const { data, error: uploadError } = await supabaseClient.storage
+                        .from('reports') // Make sure you created a bucket named 'reports'
+                        .upload(fileName, file);
+            
+                    if (uploadError) throw uploadError;
+            
+                    // 2. Get the permanent URL
+                    const { data: { publicUrl } } = supabaseClient.storage
                         .from('reports')
-                        .upload(`public/${Date.now()}_${file.name}`, file);
-
-                    if (data) {
-                        // 2. Get the permanent public link
-                        const { data: { publicUrl } } = supabaseClient.storage
-                            .from('reports')
-                            .getPublicUrl(data.path);
-
-                        // 3. Update the history record with this permanent link
-                        const updatedHistory = [...machine.maintenanceHistory];
-                        updatedHistory[index] = {
-                            ...updatedHistory[index],
-                            report: file.name,
-                            reportUrl: publicUrl 
-                        }; 
-                        onUpdateMachine({ ...machine, maintenanceHistory: updatedHistory });
-                    }
+                        .getPublicUrl(fileName);
+            
+                    // 3. Create the new history array
+                    const updatedHistory = [...machine.maintenanceHistory];
+                    updatedHistory[index] = {
+                        ...updatedHistory[index],
+                        report: file.name,
+                        reportUrl: publicUrl // This is the link that opens the PDF
+                    };
+            
+                    // 4. Save to Database
+                    onUpdateMachine({ 
+                        ...machine, 
+                        maintenanceHistory: updatedHistory 
+                    });
+            
+                    alert("Upload Successful!");
+                } catch (err) {
+                    console.error("Upload failed:", err.message);
+                    alert("Upload Error: Make sure your 'reports' bucket is set to 'Public' in Supabase.");
                 }
             };
 
@@ -1113,17 +1126,15 @@
         
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                if (!newData) return; // Prevent crashing on empty data
-                
                 setMachine(newData); // Update the screen immediately
-            
                 try {
                     const { error } = await supabaseClient
                         .from('machine_data')
-                        .upsert(newData);
+                        .upsert(newData) 
+                        .eq('serialNumber', 'FX000001'); // Forces it to overwrite the existing machine
                     if (error) throw error;
                 } catch (err) {
-                    console.error("Supabase Save Error:", err.message);
+                    console.error("Save failed:", err.message);
                 }
             };
         
@@ -1137,13 +1148,21 @@
                 const items = [];
                 
                 // Check PM Due date
-                if (machine.nextPMDue && (new Date(machine.nextPMDue) - now <= ninetyDays)) {
-                    items.push({ label: 'Preventive Maintenance Due', date: machine.nextPMDue });
+                if (machine.nextPMDue) {
+                    const diff = new Date(machine.nextPMDue) - now;
+                    if (diff <= ninetyDays) {
+                        items.push({ label: 'Preventive Maintenance Due', date: machine.nextPMDue });
+                    }
                 }
+            
                 // Check Components
                 machine.components.forEach(c => {
-                    if (c.expiryDate && (new Date(c.expiryDate) - now <= ninetyDays)) {
-                        items.push({ label: c.name || c.label, date: c.expiryDate });
+                    if (c.expiryDate) {
+                        const diff = new Date(c.expiryDate) - now;
+                        // If the date is in the past (negative) OR within 90 days (positive)
+                        if (diff <= ninetyDays) {
+                            items.push({ label: c.name || c.label, date: c.expiryDate });
+                        }
                     }
                 });
                 return items;
@@ -1168,9 +1187,7 @@
                     setView(prev); 
                 } 
             };
-
-            if (!machine) return <div className="p-20 text-center">Loading Machine Data...</div>;
-            
+          
             const navItems = [
                 { id: VIEWS.HOME, label: 'Overview', icon: icons.Home },
                 { id: VIEWS.HISTORY, label: 'PM History', icon: icons.History },
@@ -1178,7 +1195,10 @@
                 { id: VIEWS.EXPIRATION, label: 'Expirations', icon: icons.Calendar },
                 { id: VIEWS.NOTIFICATIONS, label: 'Notifications', icon: icons.Bell },
             ];
-        
+
+            // If machine is null, show a loading screen instead of a blank page
+            if (!machine) return <div className="min-h-screen flex items-center justify-center bg-slate-50 font-black uppercase tracking-widest text-indigo-600">Connecting to Cloud...</div>;
+            
             return (
                 <div className="min-h-screen bg-slate-50 flex flex-col">
                     <header className="bg-white text-gray-800 p-3 shadow-md sticky top-0 z-30">
@@ -1255,6 +1275,7 @@
 </body>
 
 </html>
+
 
 
 
