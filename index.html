@@ -172,49 +172,7 @@
         //this is a calculation function that subtracts the current date from a target deadline. It returns the number of days remaining, which is used to trigger warnings if a deadline is approaching
 
         //This function generates the main dashboard screen. It takes the machine data and displays the "Device Overview" and the two main deadline cards for PM and Contract renewal
-        const HomeView = ({ machine, onViewChange }) => {
-            // 1. Logic to calculate what is due in the next 90 days
-            const urgentReminders = React.useMemo(() => {
-                // SAFETY GUARD: If machine or components are missing, stop here
-                if (!machine?.components) return [];
-            
-                const today = new Date();
-                const ninetyDaysFromNow = new Date();
-                ninetyDaysFromNow.setDate(today.getDate() + 90);
-            
-                const items = [];
-            
-                // Check PM Date (Fixes Problem 1)
-                if (machine.nextPMDue) {
-                    const pmDate = new Date(machine.nextPMDue);
-                    if (pmDate <= ninetyDaysFromNow) {
-                        items.push({ label: 'Preventive Maintenance', date: machine.nextPMDue, type: 'PM' });
-                    }
-                }
-                
-                // Check Battery Expirations
-                machine.components.forEach(c => {
-                    if (!c.lastRepairedDate) return; // Skip if date is missing
-                    const nextDate = new Date(c.lastRepairedDate);
-                    nextDate.setFullYear(nextDate.getFullYear() + (c.intervalYears || 4));
-                    
-                    if (nextDate <= ninetyDaysFromNow) {
-                        items.push({ 
-                            label: c.name, 
-                            date: nextDate.toISOString().split('T')[0] 
-                        });
-                    }
-                });
-                
-                return items.sort((a, b) => new Date(a.date) - new Date(b.date));
-            }, [machine]);
-
-            React.useEffect(() => {
-                if (machine && urgentReminders && urgentReminders.length > 0) {
-                    setShowAlarmPopup(true);
-                }
-            }, [machine, urgentReminders]);
-            
+        const HomeView = ({ machine, onViewChange, urgentReminders }) => {            
             // 2. Helper function for days countdown
             const getDaysRemaining = (dateString) => {
                 const today = new Date();
@@ -1171,13 +1129,39 @@
                 fetchData();
             }, []);
 
-            const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
-
+            // 2. DEFINE urgentReminders HERE (Moved from HomeView)
+            const urgentReminders = React.useMemo(() => {
+                if (!machine?.components) return [];
+                
+                const today = new Date();
+                const ninetyDaysFromNow = new Date();
+                ninetyDaysFromNow.setDate(today.getDate() + 90);
+                const items = [];
+        
+                if (machine.nextPMDue) {
+                    const pmDate = new Date(machine.nextPMDue);
+                    if (pmDate <= ninetyDaysFromNow) {
+                        items.push({ label: 'Preventive Maintenance', date: machine.nextPMDue, type: 'PM' });
+                    }
+                }
+        
+                machine.components.forEach(c => {
+                    if (!c.lastRepairedDate) return;
+                    const nextDate = new Date(c.lastRepairedDate);
+                    nextDate.setFullYear(nextDate.getFullYear() + (c.intervalYears || 4));
+                    if (nextDate <= ninetyDaysFromNow) {
+                        items.push({ label: c.name, date: nextDate.toISOString().split('T')[0] });
+                    }
+                });
+        
+                return items.sort((a, b) => new Date(a.date) - new Date(b.date));
+            }, [machine]);
+        
+            // 3. Trigger the Pop-up (Now it can find urgentReminders!)
             React.useEffect(() => {
-                // Only trigger if data is loaded, alarms exist, AND we haven't shown it yet this session
                 if (machine && urgentReminders?.length > 0 && !hasInitialPopUpShown) {
                     setShowAlarmPopup(true);
-                    setHasInitialPopUpShown(true); // Mark as shown
+                    setHasInitialPopUpShown(true);
                 }
             }, [machine, urgentReminders, hasInitialPopUpShown]);
         
@@ -1304,7 +1288,11 @@
                             )}
                             
                             <div className="animate-fadeIn"> 
-                                {view === VIEWS.HOME && <HomeView machine={machine} onViewChange={setView} />}
+                                {view === VIEWS.HOME && <HomeView 
+                                    machine={machine} 
+                                    onViewChange={setView} 
+                                    urgentReminders={urgentReminders} // <-- Add this line
+                                />}
                                 {view === VIEWS.HISTORY && <HistoryView history={machine.maintenanceHistory} onUpdateMachine={onUpdateMachine} machine={machine} />}
                                 {view === VIEWS.NOTIFICATIONS && <NotificationsView machine={machine} />}
                                 {view === VIEWS.ENGINEER && <EngineerView machine={machine} onUpdateMachine={onUpdateMachine} />}
@@ -1344,6 +1332,7 @@
 </body>
 
 </html>
+
 
 
 
