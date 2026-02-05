@@ -1149,7 +1149,7 @@
                         .from('machine_data')
                         .select('*')
                         .eq('serialNumber', 'FX000001')
-                        .single();
+                        .maybeSingle();
             
                     // ONLY update the state if data actually exists in Supabase
                     if (data) {
@@ -1338,6 +1338,7 @@
 </body>
 
 </html>
+
 
 
 
