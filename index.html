@@ -1105,7 +1105,8 @@
             const [history, setHistory] = React.useState([]);
             const [isSidebarOpen, setSidebarOpen] = React.useState(false);
             const [showAlarmPopup, setShowAlarmPopup] = React.useState(false);
-        
+            const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
+            
             // 1. Load data from Supabase when the app opens
             React.useEffect(() => {
                 const fetchData = async () => {
@@ -1332,6 +1333,7 @@
 </body>
 
 </html>
+
 
 
 
