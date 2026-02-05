@@ -1181,8 +1181,7 @@
                             nextPMDue: newData.nextPMDue,
                             components: newData.components,
                             maintenanceHistory: newData.maintenanceHistory
-                        })
-                        .eq('serialNumber', 'FX000001');
+                        }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
                     console.log("Successfully saved to cloud!");
@@ -1333,6 +1332,7 @@
 </body>
 
 </html>
+
 
 
 
