@@ -1217,7 +1217,7 @@
                         .upsert({
                             serialNumber: 'FX000001',
                             // ADD THIS LINE BELOW
-                            machineType: machine.machineType || 'Surdial DX', 
+                            machineType: machine.machineType, 
                             lastPMDate: newData.lastPMDate,
                             nextPMDue: newData.nextPMDue,
                             components: newData.components,
@@ -1374,6 +1374,7 @@
 </body>
 
 </html>
+
 
 
 
