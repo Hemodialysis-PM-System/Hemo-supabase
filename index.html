@@ -328,13 +328,27 @@
             // --- delete PM history record function ---
             const handleDelete = (index) => {
                 if (window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) {
-                    // Filter out the item at the specific index
+                    // 1. Create the new history list without the deleted item
                     const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                     
-                    // Sync the updated list back to Supabase/State
+                    // 2. Find the most recent date from the REMAINING history
+                    // We look specifically for "PM" type records
+                    let newLastPMDate = "";
+                    if (updatedHistory.length > 0) {
+                        const pmRecords = updatedHistory
+                            .filter(record => record.type === 'PM')
+                            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort newest first
+                        
+                        if (pmRecords.length > 0) {
+                            newLastPMDate = pmRecords[0].date;
+                        }
+                    }
+            
+                    // 3. Update everything back to Supabase/State
                     onUpdateMachine({ 
                         ...machine, 
-                        maintenanceHistory: updatedHistory 
+                        maintenanceHistory: updatedHistory,
+                        lastPMDate: newLastPMDate // This sets it back to the previous record's date
                     });
                 }
             };
@@ -1360,6 +1374,7 @@
 </body>
 
 </html>
+
 
 
 
