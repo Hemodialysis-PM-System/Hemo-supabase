@@ -209,6 +209,12 @@
                 return items.sort((a, b) => new Date(a.date) - new Date(b.date));
             }, [machine]);
 
+            React.useEffect(() => {
+                if (machine && urgentReminders && urgentReminders.length > 0) {
+                    setShowAlarmPopup(true);
+                }
+            }, [machine, urgentReminders]);
+            
             // 2. Helper function for days countdown
             const getDaysRemaining = (dateString) => {
                 const today = new Date();
@@ -1338,6 +1344,7 @@
 </body>
 
 </html>
+
 
 
 
