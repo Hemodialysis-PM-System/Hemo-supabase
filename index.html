@@ -761,7 +761,7 @@
                         
                         // Logic: If No Fault Found -> "/"
                         // Otherwise -> The actual resolution text
-                        result: isNoFault 
+                        resolution_code: isNoFault 
                             ? "/" 
                             : `Resolution: ${editData.resolutionCode}`,
                         
@@ -1177,6 +1177,8 @@
                         .from('machine_data')
                         .upsert({
                             serialNumber: 'FX000001',
+                            // ADD THIS LINE BELOW
+                            machineType: machine.machineType || 'Surdial DX', 
                             lastPMDate: newData.lastPMDate,
                             nextPMDue: newData.nextPMDue,
                             components: newData.components,
@@ -1186,10 +1188,11 @@
                     if (error) throw error;
                     console.log("Successfully saved to cloud!");
                 } catch (err) {
+                    // This will now stop showing the 'machineType' error
                     console.error("Save failed:", err.message);
                 }
             };
-        
+                    
             // 3. Priority Alarm Logic
             //pop up alarm that show components overdue or 90 days before deadline
             const priorityAlarms = React.useMemo(() => {
@@ -1332,6 +1335,7 @@
 </body>
 
 </html>
+
 
 
 
