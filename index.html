@@ -328,11 +328,10 @@
             // --- delete PM history record function ---
             const handleDelete = (index) => {
                 if (window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) {
-                    // 1. Create the new history list
                     const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                     
-                    // 2. Find the most recent date from the remaining records
-                    let newLastPMDate = "";
+                    let newLastPMDate = null; // Default to null instead of ""
+                    
                     if (updatedHistory.length > 0) {
                         const pmRecords = updatedHistory
                             .filter(record => record.type === 'PM')
@@ -343,14 +342,11 @@
                         }
                     }
             
-                    // 3. Update Supabase
+                    // Sync to Supabase
                     onUpdateMachine({ 
                         ...machine, 
                         maintenanceHistory: updatedHistory,
-                        lastPMDate: newLastPMDate,
-                        // SAFE FALLBACK: If the machineType is empty, send "Surdial DX" 
-                        // instead of nothing, to prevent the 23502 error.
-                        machineType: machine.machineType || "Surdial DX" 
+                        lastPMDate: newLastPMDate // Sending null allows the DB to clear the field
                     });
                 }
             };
@@ -1376,6 +1372,7 @@
 </body>
 
 </html>
+
 
 
 
