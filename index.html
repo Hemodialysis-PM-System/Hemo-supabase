@@ -1217,14 +1217,13 @@
             const onUpdateMachine = async (newData) => {
                 // 1. Update the UI screen immediately
                 setMachine(newData); 
-            
+                
                 // 2. Send to Supabase
                 try {
                     const { error } = await supabaseClient
                         .from('machine_data')
                         .upsert({
                             serialNumber: 'FX000001',
-                            // Always provide a fallback string so it's never 'undefined'
                             machineType: newData.machineType || "Fresenius 4008S", 
                             lastPMDate: newData.lastPMDate,
                             nextPMDue: newData.nextPMDue,
@@ -1236,9 +1235,14 @@
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
+                    
                     console.log("Successfully saved to cloud!");
+                    
+                    // --- ADD THIS LINE BELOW ---
+                    // This stops the crash by moving you away from the form once saved
+                    setCurrentView(VIEWS.HOME); 
+                    
                 } catch (err) {
-                    // This will now stop showing the 'machineType' error
                     console.error("Save failed:", err.message);
                 }
             };
@@ -1341,15 +1345,26 @@
                             )}
                             
                             <div className="animate-fadeIn"> 
-                                {view === VIEWS.HOME && <HomeView 
-                                    machine={machine} 
-                                    onViewChange={setView} 
-                                    urgentReminders={urgentReminders} // <-- Add this line
-                                />}
-                                {view === VIEWS.HISTORY && <HistoryView history={machine.maintenanceHistory} onUpdateMachine={onUpdateMachine} machine={machine} />}
-                                {view === VIEWS.NOTIFICATIONS && <NotificationsView machine={machine} />}
-                                {view === VIEWS.ENGINEER && <EngineerView machine={machine} onUpdateMachine={onUpdateMachine} />}
-                                {view === VIEWS.EXPIRATION && <ExpirationView components={machine.components} onUpdateAll={(newComponents) => onUpdateMachine({ ...machine, components: newComponents })} />}
+                                {view === VIEWS.HOME && (
+                                    <HomeView machine={machine} onViewChange={setView} urgentReminders={urgentReminders} />
+                                )}
+                                
+                                {/* Add the "machine.maintenanceHistory &&" check to these */}
+                                {view === VIEWS.HISTORY && machine.maintenanceHistory && (
+                                    <HistoryView history={machine.maintenanceHistory} onUpdateMachine={onUpdateMachine} machine={machine} />
+                                )}
+                                
+                                {view === VIEWS.NOTIFICATIONS && machine.maintenanceHistory && (
+                                    <NotificationsView machine={machine} />
+                                )}
+                                
+                                {view === VIEWS.ENGINEER && (
+                                    <EngineerView machine={machine} onUpdateMachine={onUpdateMachine} />
+                                )}
+                                
+                                {view === VIEWS.EXPIRATION && machine.components && (
+                                    <ExpirationView components={machine.components} onUpdateAll={(newComponents) => onUpdateMachine({ ...machine, components: newComponents })} />
+                                )}
                             </div>
                         </main>
                     </div>
@@ -1385,6 +1400,7 @@
 </body>
 
 </html>
+
 
 
 
