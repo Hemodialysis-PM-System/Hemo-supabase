@@ -1158,8 +1158,8 @@
                         // Ensure components and history are at least empty arrays so code doesn't crash
                         setMachine({
                             ...data,
-                            components: data.components || [],
-                            maintenanceHistory: data.maintenanceHistory || []
+                            components: Array.isArray(data.components) ? data.components : [],
+                            maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : []
                         });
                     }
                 };
@@ -1214,12 +1214,15 @@
                         .from('machine_data')
                         .upsert({
                             serialNumber: 'FX000001',
-                            // ADD THIS LINE BELOW
-                            machineType: machine.machineType, 
-                            lastPMDate: newData.lastPMDate,
-                            nextPMDue: newData.nextPMDue,
-                            components: newData.components,
-                            maintenanceHistory: newData.maintenanceHistory
+                            // Always provide a fallback string so it's never 'undefined'
+                            machineType: newData.machineType || "Fresenius 4008S", 
+                            lastPMDate: newData.lastPMDate || null,
+                            nextPMDue: newData.nextPMDue || null,
+                            components: newData.components || [],
+                            maintenanceHistory: newData.maintenanceHistory || [],
+                            faultCode: newData.faultCode || "",
+                            subFaultCode: newData.subFaultCode || "",
+                            resolutionCode: newData.resolutionCode || ""
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
@@ -1372,6 +1375,7 @@
 </body>
 
 </html>
+
 
 
 
