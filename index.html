@@ -1153,34 +1153,36 @@
             const [isSidebarOpen, setSidebarOpen] = React.useState(false);
             const [showAlarmPopup, setShowAlarmPopup] = React.useState(false);
             const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
-
             const [isLoading, setIsLoading] = React.useState(true);
             
             // 1. Load data from Supabase when the app opens
             // Locate this in your script tag
             React.useEffect(() => {
                 const fetchData = async () => {
-                    const { data, error } = await supabaseClient
-                        .from('machine_data')
-                        .select('*')
-                        .eq('serialNumber', 'FX000001')
-                        .maybeSingle();
-            
-                    if (data) {
-                        setMachine({
-                            ...data,
-                            // SAFETY GUARDS: If these are null in DB, force them to be empty arrays []
-                            components: data.components || [],
-                            maintenanceHistory: data.maintenanceHistory || [],
-                            machineType: data.machineType || "Fresenius 4008S"
-                        });
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('machine_data')
+                            .select('*')
+                            .eq('serialNumber', 'FX000001')
+                            .maybeSingle();
+        
+                        if (error) throw error;
+        
+                        if (data) {
+                            setMachine({
+                                ...data,
+                                components: Array.isArray(data.components) ? data.components : initialMachineData.components,
+                                maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : initialMachineData.maintenanceHistory
+                            });
+                        }
+                    } catch (err) {
+                        console.error("Fetch error:", err.message);
+                    } finally {
+                        setIsLoading(false);
                     }
-                    setIsLoading(false);
                 };
                 fetchData();
             }, []);
-            
-            if (isLoading) return <div>Syncing with Database...</div>;
 
             // 2. DEFINE urgentReminders HERE (Moved from HomeView)
             const urgentReminders = React.useMemo(() => {
@@ -1246,12 +1248,10 @@
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
-                    
-                    // Return to Home after saving to refresh the view
-                    setView(VIEWS.HOME);
-                    
+                    console.log("Successfully saved to cloud");
                 } catch (err) {
-                    console.error("Save failed:", err.message);
+                    console.error("Save error:", err.message);
+                    alert("Error saving to cloud: " + err.message);
                 }
             };
                     
@@ -1414,6 +1414,7 @@
 </body>
 
 </html>
+
 
 
 
