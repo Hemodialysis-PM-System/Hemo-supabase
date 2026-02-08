@@ -1214,12 +1214,15 @@
                         .from('machine_data')
                         .upsert({
                             serialNumber: 'FX000001',
-                            // ADD THIS LINE BELOW
-                            machineType: machine.machineType, 
-                            lastPMDate: newData.lastPMDate,
+                            // USE newData INSTEAD OF machine FOR EVERYTHING
+                            machineType: newData.machineType, 
+                            lastPMDate: newData.lastPMDate, // This is the fix for your delete logic
                             nextPMDue: newData.nextPMDue,
                             components: newData.components,
-                            maintenanceHistory: newData.maintenanceHistory
+                            maintenanceHistory: newData.maintenanceHistory,
+                            faultCode: newData.faultCode,
+                            subFaultCode: newData.subFaultCode,
+                            resolutionCode: newData.resolutionCode
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
@@ -1372,6 +1375,7 @@
 </body>
 
 </html>
+
 
 
 
