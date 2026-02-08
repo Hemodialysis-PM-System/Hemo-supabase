@@ -823,19 +823,25 @@
                 
                 // 2. THE AUTOMATIC NAME TRICK
                 // Store the original title so we can change it back later
-                const originalTitle = document.title;
-                
-                // Set the title to the filename you want
-                document.title = `PM-Report-${machine.serialNumber}-${dateString}`;
-                
-                // 3. TRIGGER PRINT (This part ensures your selections show up)
-                setTimeout(() => {
-                    window.print();
+                const handlePrint = () => {
+                    const originalTitle = document.title;
+                    const dateString = new Date().toISOString().split('T')[0];
                     
-                    // Change the title back to normal after the print dialog opens
-                    document.title = originalTitle;
-                    setIsEditing(false);
-                }, 500);
+                    document.title = `PM-Report-${machine.serialNumber}-${dateString}`;
+                    
+                    // Move the state update BEFORE the print call
+                    setIsEditing(false); 
+                    
+                    // Add a slightly longer delay to ensure the browser is ready
+                    setTimeout(() => {
+                        window.print();
+                        
+                        // Restore title AFTER the print dialog is handled
+                        setTimeout(() => {
+                            document.title = originalTitle;
+                        }, 1000);
+                    }, 700);
+                };
 
                 alert("PM Report data saved. Dashboard updated to 1-year interval");
             };
@@ -1414,6 +1420,7 @@
 </body>
 
 </html>
+
 
 
 
