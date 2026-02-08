@@ -1229,8 +1229,8 @@
                             serialNumber: 'FX000001',
                             // USE newData INSTEAD OF machine FOR EVERYTHING
                             machineType: newData.machineType, 
-                            lastPMDate: newData.lastPMDate, // This is the fix for your delete logic
-                            nextPMDue: newData.nextPMDue,
+                            lastPMDate: newData.lastPMDate || "", // This is the fix for your delete logic
+                            nextPMDue: newData.nextPMDue || "",
                             components: newData.components,
                             maintenanceHistory: newData.maintenanceHistory,
                             faultCode: newData.faultCode,
@@ -1239,10 +1239,10 @@
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
-                    console.log("Successfully saved to cloud!");
+                    console.log("Database Sync Complete");
                 } catch (err) {
                     // This will now stop showing the 'machineType' error
-                    console.error("Save failed:", err.message);
+                    console.error("Database Sync Failed:", err.message);
                 }
             };
                     
@@ -1388,6 +1388,7 @@
 </body>
 
 </html>
+
 
 
 
