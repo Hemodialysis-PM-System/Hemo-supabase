@@ -1145,25 +1145,25 @@
             const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
             
             // 1. Load data from Supabase when the app opens
+            // Locate this in your script tag
             React.useEffect(() => {
                 const fetchData = async () => {
-                    const { data, error } = await supabaseClient
+                    const { data } = await supabaseClient
                         .from('machine_data')
                         .select('*')
                         .eq('serialNumber', 'FX000001')
                         .maybeSingle();
             
-                    // ONLY update the state if data actually exists in Supabase
                     if (data) {
-                        // Ensure components and history are at least empty arrays so code doesn't crash
                         setMachine({
                             ...data,
+                            // SAFETY GUARDS: If these are null in DB, force them to be empty arrays []
                             components: Array.isArray(data.components) ? data.components : [],
-                            maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : []
+                            maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : [],
+                            machineType: data.machineType || "Fresenius 4008S"
                         });
                     }
                 };
-                
                 fetchData();
             }, []);
 
@@ -1216,13 +1216,13 @@
                             serialNumber: 'FX000001',
                             // Always provide a fallback string so it's never 'undefined'
                             machineType: newData.machineType || "Fresenius 4008S", 
-                            lastPMDate: newData.lastPMDate || null,
-                            nextPMDue: newData.nextPMDue || null,
+                            lastPMDate: newData.lastPMDate,
+                            nextPMDue: newData.nextPMDue,
                             components: newData.components || [],
                             maintenanceHistory: newData.maintenanceHistory || [],
-                            faultCode: newData.faultCode || "",
-                            subFaultCode: newData.subFaultCode || "",
-                            resolutionCode: newData.resolutionCode || ""
+                            faultCode: newData.faultCode,
+                            subFaultCode: newData.subFaultCode,
+                            resolutionCode: newData.resolutionCode
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
@@ -1375,6 +1375,7 @@
 </body>
 
 </html>
+
 
 
 
