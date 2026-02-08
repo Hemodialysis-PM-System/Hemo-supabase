@@ -328,13 +328,18 @@
             // --- delete PM history record function ---
             const handleDelete = (index) => {
                 if (window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) {
+                    // 1. Create the new list
                     const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                     
-                    let newLastPMDate = null; // Default to null instead of ""
+                    // 2. Find the most recent date
+                    let newLastPMDate = null; 
                     
                     if (updatedHistory.length > 0) {
                         const pmRecords = updatedHistory
-                            .filter(record => record.type === 'PM')
+                            .filter(record => 
+                                // CHANGE: Match "PM Report" instead of just "PM"
+                                record.type === 'PM' || record.type === 'PM Report'
+                            )
                             .sort((a, b) => new Date(b.date) - new Date(a.date));
                         
                         if (pmRecords.length > 0) {
@@ -342,11 +347,19 @@
                         }
                     }
             
-                    // Sync to Supabase
+                    //Next PM Due date to also update when you delete a record
+                    let newNextPMDue = null;
+                    if (newLastPMDate) {
+                        const nextDate = new Date(newLastPMDate);
+                        nextDate.setFullYear(nextDate.getFullYear() + 1); // Add 1 year
+                        newNextPMDue = nextDate.toISOString().split('T')[0];
+                    }
+                    
                     onUpdateMachine({ 
                         ...machine, 
                         maintenanceHistory: updatedHistory,
-                        lastPMDate: newLastPMDate // Sending null allows the DB to clear the field
+                        lastPMDate: newLastPMDate,
+                        nextPMDue: newNextPMDue // This will keep the schedule correct too
                     });
                 }
             };
@@ -1375,6 +1388,7 @@
 </body>
 
 </html>
+
 
 
 
