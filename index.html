@@ -1215,32 +1215,35 @@
         
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                // 1. Update the UI screen immediately
-                setMachine(newData); 
-                
-                // 2. Send to Supabase
+                // 1. CRITICAL: Merge the new data with current machine state 
+                // to prevent components/machineType from becoming undefined
+                const updatedMachine = {
+                    ...machine, // This keeps the existing components/SN/Type
+                    ...newData  // This applies the new history/dates
+                };
+            
+                setMachine(updatedMachine); 
+            
                 try {
                     const { error } = await supabaseClient
                         .from('machine_data')
                         .upsert({
                             serialNumber: 'FX000001',
-                            machineType: newData.machineType || "Fresenius 4008S", 
-                            lastPMDate: newData.lastPMDate,
-                            nextPMDue: newData.nextPMDue,
-                            components: newData.components || [],
-                            maintenanceHistory: newData.maintenanceHistory || [],
-                            faultCode: newData.faultCode,
-                            subFaultCode: newData.subFaultCode,
-                            resolutionCode: newData.resolutionCode
+                            machineType: updatedMachine.machineType || "Fresenius 4008S", 
+                            lastPMDate: updatedMachine.lastPMDate,
+                            nextPMDue: updatedMachine.nextPMDue,
+                            // Ensure we never send NULL to Supabase
+                            components: updatedMachine.components || [],
+                            maintenanceHistory: updatedMachine.maintenanceHistory || [],
+                            faultCode: updatedMachine.faultCode,
+                            subFaultCode: updatedMachine.subFaultCode,
+                            resolutionCode: updatedMachine.resolutionCode
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
                     
-                    console.log("Successfully saved to cloud!");
-                    
-                    // --- ADD THIS LINE BELOW ---
-                    // This stops the crash by moving you away from the form once saved
-                    setCurrentView(VIEWS.HOME); 
+                    // Return to Home after saving to refresh the view
+                    setView(VIEWS.HOME);
                     
                 } catch (err) {
                     console.error("Save failed:", err.message);
@@ -1349,12 +1352,15 @@
                                     <HomeView machine={machine} onViewChange={setView} urgentReminders={urgentReminders} />
                                 )}
                                 
-                                {/* Add the "machine.maintenanceHistory &&" check to these */}
-                                {view === VIEWS.HISTORY && machine.maintenanceHistory && (
-                                    <HistoryView history={machine.maintenanceHistory} onUpdateMachine={onUpdateMachine} machine={machine} />
+                                {view === VIEWS.HISTORY && (
+                                    <HistoryView 
+                                        history={machine.maintenanceHistory || []} 
+                                        onUpdateMachine={onUpdateMachine} 
+                                        machine={machine} 
+                                    />
                                 )}
                                 
-                                {view === VIEWS.NOTIFICATIONS && machine.maintenanceHistory && (
+                                {view === VIEWS.NOTIFICATIONS && (
                                     <NotificationsView machine={machine} />
                                 )}
                                 
@@ -1362,8 +1368,11 @@
                                     <EngineerView machine={machine} onUpdateMachine={onUpdateMachine} />
                                 )}
                                 
-                                {view === VIEWS.EXPIRATION && machine.components && (
-                                    <ExpirationView components={machine.components} onUpdateAll={(newComponents) => onUpdateMachine({ ...machine, components: newComponents })} />
+                                {view === VIEWS.EXPIRATION && (
+                                    <ExpirationView 
+                                        components={machine.components || []} 
+                                        onUpdateAll={(newComponents) => onUpdateMachine({ ...machine, components: newComponents })} 
+                                    />
                                 )}
                             </div>
                         </main>
@@ -1400,6 +1409,7 @@
 </body>
 
 </html>
+
 
 
 
