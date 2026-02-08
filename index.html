@@ -330,23 +330,33 @@
                 if (window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) {
                     const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                     
-                    let newLastPMDate = null; // Default to null instead of ""
+                    let newLastPMDate = null;
+                    let newNextPMDue = null;
                     
+                    // 1. Calculate the new dates based on what's left
                     if (updatedHistory.length > 0) {
                         const pmRecords = updatedHistory
-                            .filter(record => record.type === 'PM')
+                            .filter(record => 
+                                record.type && 
+                                record.type.toLowerCase().includes('pm')
+                            )
                             .sort((a, b) => new Date(b.date) - new Date(a.date));
                         
                         if (pmRecords.length > 0) {
                             newLastPMDate = pmRecords[0].date;
+                            const nextDate = new Date(newLastPMDate);
+                            nextDate.setFullYear(nextDate.getFullYear() + 1);
+                            newNextPMDue = nextDate.toISOString().split('T')[0];
                         }
                     }
             
-                    // Sync to Supabase
+                    // 2. ALWAYS call this, even if updatedHistory is empty []
+                    // This ensures the "Expirtations" and "Notifications" pages have data to read
                     onUpdateMachine({ 
                         ...machine, 
                         maintenanceHistory: updatedHistory,
-                        lastPMDate: newLastPMDate // Sending null allows the DB to clear the field
+                        lastPMDate: newLastPMDate,
+                        nextPMDue: newNextPMDue
                     });
                 }
             };
@@ -1375,6 +1385,7 @@
 </body>
 
 </html>
+
 
 
 
