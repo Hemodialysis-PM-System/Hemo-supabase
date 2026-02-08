@@ -328,39 +328,39 @@
             // --- delete PM history record function ---
             const handleDelete = (index) => {
                 if (window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) {
-                    // 1. Create the new list
+                    // 1. Get the new history immediately
                     const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                     
                     // 2. Find the most recent date
                     let newLastPMDate = null; 
+                    let newNextPMDue = null;
                     
                     if (updatedHistory.length > 0) {
+                        // 2. Find anything that is a PM (case insensitive search)
                         const pmRecords = updatedHistory
-                            .filter(record => 
-                                // CHANGE: Match "PM Report" instead of just "PM"
-                                record.type === 'PM' || record.type === 'PM Report'
-                            )
+                            .filter(record => record.type && record.type.toLowerCase().includes('pm'))
                             .sort((a, b) => new Date(b.date) - new Date(a.date));
                         
                         if (pmRecords.length > 0) {
                             newLastPMDate = pmRecords[0].date;
+                            
+                            // 3. Force Next PM Due to be exactly 1 year after the NEW Last PM
+                            const nextDate = new Date(newLastPMDate);
+                            nextDate.setFullYear(nextDate.getFullYear() + 1);
+                            newNextPMDue = nextDate.toISOString().split('T')[0];
                         }
                     }
             
-                    //Next PM Due date to also update when you delete a record
-                    let newNextPMDue = null;
-                    if (newLastPMDate) {
-                        const nextDate = new Date(newLastPMDate);
-                        nextDate.setFullYear(nextDate.getFullYear() + 1); // Add 1 year
-                        newNextPMDue = nextDate.toISOString().split('T')[0];
-                    }
-                    
-                    onUpdateMachine({ 
-                        ...machine, 
+                    // 4. Create the final data object explicitly
+                    const finalData = {
+                        ...machine,
                         maintenanceHistory: updatedHistory,
                         lastPMDate: newLastPMDate,
-                        nextPMDue: newNextPMDue // This will keep the schedule correct too
-                    });
+                        nextPMDue: newNextPMDue
+                    };
+            
+                    // 5. Send THIS object to your sync function
+                    onUpdateMachine(finalData);
                 }
             };
             
@@ -1388,6 +1388,7 @@
 </body>
 
 </html>
+
 
 
 
