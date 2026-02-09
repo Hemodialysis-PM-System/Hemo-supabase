@@ -786,7 +786,7 @@
             const resolutionOptions = ["Clean and Check Device", "Calibrate Device", "Reload Device", "Repair Device", "Replace Parts", "Reset Device", "Operation Refresh Training", "Pending for Replacement", "Others", "Call for Remote Engineer"];
 
                         
-            const handleSave = () => {
+            const handleSave = async () => {
                 const today = new Date();
                 const dateString = today.toISOString().split('T')[0];
                 
@@ -826,26 +826,16 @@
                 // 2. FIX BUTTON: Toggle back to 'Edit Report' mode immediately
                 setIsEditing(false);
                 
-                // 2. THE AUTOMATIC NAME TRICK
-                // Store the original title so we can change it back later
-                const handlePrint = () => {
-                    const originalTitle = document.title;
-                    const dateString = new Date().toISOString().split('T')[0];
-                    
-                    // 1. Set the PDF filename
-                    document.title = `PM-Report-${machine.serialNumber}-${dateString}`;
-                    
-                    // 2. Hide the "Save/Edit" UI immediately
-                    setIsEditing(false); 
-                    
-                    // 3. WAIT for React to remove the buttons from the screen
-                    // 700ms is the "sweet spot" for most browsers
-                    setTimeout(() => {
-                        window.print();
-                        document.title = originalTitle;
-                    }, 700);
-                };
-
+                // 3. Trigger Print logic directly
+                const originalTitle = document.title;
+                document.title = `PM-Report-${machine.serialNumber}-${dateString}`;
+                
+                // Delay ensures the "Save" button disappears before the PDF captures the screen
+                setTimeout(() => {
+                    window.print();
+                    document.title = originalTitle;
+                }, 700);
+            
                 alert("PM Report data saved. Dashboard updated to 1-year interval");
             };
 
@@ -1403,6 +1393,7 @@
 </body>
 
 </html>
+
 
 
 
