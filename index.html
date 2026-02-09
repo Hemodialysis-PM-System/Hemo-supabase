@@ -1207,32 +1207,36 @@
              
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                // 1. Update UI immediately
+                // 1. Update the local screen immediately
                 const updatedMachine = { ...machine, ...newData };
                 setMachine(updatedMachine); 
             
                 try {
-                    // 2. Sync to Supabase
-                    const { error } = await supabaseClient
+                    // 2. Attempt to save to Cloud
+                    const { data, error } = await supabaseClient
                         .from('machine_data')
                         .upsert({
-                            serialNumber: 'FX000001',
-                            machineType: updatedMachine.machineType || "Fresenius 4008S",
+                            // Ensure these names match your Supabase column headers exactly
+                            serialNumber: updatedMachine.serialNumber, 
+                            machineType: updatedMachine.machineType,
                             lastPMDate: updatedMachine.lastPMDate,
                             nextPMDue: updatedMachine.nextPMDue,
-                            components: updatedMachine.components || [],
-                            maintenanceHistory: updatedMachine.maintenanceHistory || [],
-                            faultCode: updatedMachine.faultCode || "",
-                            subFaultCode: updatedMachine.subFaultCode || "",
-                            resolutionCode: updatedMachine.resolutionCode || ""
-                        }, { onConflict: 'serialNumber' });
+                            components: updatedMachine.components,
+                            maintenanceHistory: updatedMachine.maintenanceHistory,
+                            faultCode: updatedMachine.faultCode,
+                            subFaultCode: updatedMachine.subFaultCode,
+                            resolutionCode: updatedMachine.resolutionCode
+                        });
             
-                    if (error) throw error;
-                    console.log("Successfully saved to cloud");
-                    return true; // Return true to signal success
+                    if (error) {
+                        // This log will tell you exactly which column is failing (e.g., "invalid input for type json")
+                        console.error("Supabase Error Details:", error.message, error.details);
+                        throw error;
+                    }
+                    
+                    console.log("Cloud sync successful.");
                 } catch (err) {
-                    console.error("Save error:", err.message);
-                    return false;
+                    alert("Sync Failed: Check browser console (F12) for column errors.");
                 }
             };
                                 
@@ -1397,6 +1401,7 @@
 </body>
 
 </html>
+
 
 
 
