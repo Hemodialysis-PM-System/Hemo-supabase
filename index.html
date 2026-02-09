@@ -124,22 +124,14 @@
             serialNumber: 'FX000001', 
             machineType: 'Fresenius 4008S',
             safetyTestStatus: 'Pass',
-            lastPMDate: '2025-09-01',
-            nextPMDue: '2026-09-01',
+            lastPMDate: '',
+            nextPMDue: '',
             faultCode: '--Select fault code--', 
             subFaultCode: '--Select detail--',
             resolutionCode: '--Select resolution--',
             electricalSafetyTest: '',
-            components: [
-                { id: 1, name: 'Monitor Battery', lastRepairedDate: '2022-01-15', intervalYears: 4 },
-                { id: 2, name: 'Power Supply Unit Battery', lastRepairedDate: '2022-03-10', intervalYears: 4 },
-                { id: 3, name: 'System Battery', lastRepairedDate: '2023-08-20', intervalYears: 4 },
-            ],
-            maintenanceHistory: [
-                { date: '2024-09-01', type: 'Preventive Maintenance - Electrical problem', report: 'PM-report-FX000001-2024-09-01.pdf', resolution_code: 'Call for Remote Engineer' },
-                { date: '2024-03-05', type: 'Preventive Maintenance - Alarm problem', report: 'PM-report-FX000001-2024-03-05.pdf', resolution_code: 'Clean and Check Device' },
-                { date: '2023-09-08', type: 'Preventive Maintenance - Pass', report: 'PM-report-FX000001-2023-09-08.pdf', resolution_code: '/' },
-            ]
+            components: [],
+            maintenanceHistory: []
         };
 
         const formatDate = (dateString) => {
@@ -1393,6 +1385,7 @@
 </body>
 
 </html>
+
 
 
 
