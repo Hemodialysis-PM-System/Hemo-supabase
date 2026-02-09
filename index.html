@@ -820,7 +820,11 @@
                     nextPMDue: new Date(new Date().setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0]
                 };
 
-                onUpdateMachine(updatedData);
+                // 1. FIX PERSISTENCE: Wait for the cloud update to finish
+                await onUpdateMachine(updatedData);
+            
+                // 2. FIX BUTTON: Toggle back to 'Edit Report' mode immediately
+                setIsEditing(false);
                 
                 // 2. THE AUTOMATIC NAME TRICK
                 // Store the original title so we can change it back later
@@ -838,11 +842,7 @@
                     // 700ms is the "sweet spot" for most browsers
                     setTimeout(() => {
                         window.print();
-                        
-                        // 4. Restore the original website title after a delay
-                        setTimeout(() => {
-                            document.title = originalTitle;
-                        }, 1000);
+                        document.title = originalTitle;
                     }, 700);
                 };
 
@@ -1213,41 +1213,35 @@
              
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                // 1. Use a functional update to ensure we have the absolute latest state
-                setMachine(prevMachine => {
-                    const updatedMachine = { ...prevMachine, ...newData };
+                // 1. Update UI immediately
+                const updatedMachine = { ...machine, ...newData };
+                setMachine(updatedMachine); 
             
-                    // 2. Trigger the cloud save inside the state update logic
-                    // using the local 'updatedMachine' variable specifically
-                    const saveToCloud = async (dataToSave) => {
-                        try {
-                            const { error } = await supabaseClient
-                                .from('machine_data')
-                                .upsert({
-                                    serialNumber: 'FX000001',
-                                    machineType: dataToSave.machineType || "Fresenius 4008S",
-                                    lastPMDate: dataToSave.lastPMDate,
-                                    nextPMDue: dataToSave.nextPMDue,
-                                    components: dataToSave.components || [],
-                                    maintenanceHistory: dataToSave.maintenanceHistory || [],
-                                    faultCode: dataToSave.faultCode || "",
-                                    subFaultCode: dataToSave.subFaultCode || "",
-                                    resolutionCode: dataToSave.resolutionCode || ""
-                                }, { onConflict: 'serialNumber' });
+                try {
+                    // 2. Sync to Supabase
+                    const { error } = await supabaseClient
+                        .from('machine_data')
+                        .upsert({
+                            serialNumber: 'FX000001',
+                            machineType: updatedMachine.machineType || "Fresenius 4008S",
+                            lastPMDate: updatedMachine.lastPMDate,
+                            nextPMDue: updatedMachine.nextPMDue,
+                            components: updatedMachine.components || [],
+                            maintenanceHistory: updatedMachine.maintenanceHistory || [],
+                            faultCode: updatedMachine.faultCode || "",
+                            subFaultCode: updatedMachine.subFaultCode || "",
+                            resolutionCode: updatedMachine.resolutionCode || ""
+                        }, { onConflict: 'serialNumber' });
             
-                            if (error) throw error;
-                            console.log("Successfully saved to cloud");
-                        } catch (err) {
-                            console.error("Save error:", err.message);
-                            // Don't alert here to avoid crashing the print callback
-                        }
-                    };
-            
-                    saveToCloud(updatedMachine);
-                    return updatedMachine;
-                });
+                    if (error) throw error;
+                    console.log("Successfully saved to cloud");
+                    return true; // Return true to signal success
+                } catch (err) {
+                    console.error("Save error:", err.message);
+                    return false;
+                }
             };
-                    
+                                
             // 3. Priority Alarm Logic
             //pop up alarm that show components overdue or 90 days before deadline
             const priorityAlarms = React.useMemo(() => {
@@ -1409,6 +1403,7 @@
 </body>
 
 </html>
+
 
 
 
