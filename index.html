@@ -1149,19 +1149,31 @@
             // 1. Load data from Supabase when the app opens
             // Locate this in your script tag
             React.useEffect(() => {
-                async function fetchData() {
-                    const { data, error } = await supabaseClient
-                        .from('machines') // Ensure your table name is 'machines'
-                        .select('*')
-                        .eq('serialNumber', 'FX000001') // Matches your SN
-                        .single();
+                const fetchData = async () => {
+                    try {
+                        const { data, error } = await supabaseClient
+                            .from('machine_data')
+                            .select('*')
+                            .eq('serialNumber', 'FX000001')
+                            .maybeSingle();
             
-                    if (data) {
-                        setMachine(data);
-                    } else if (error) {
-                        console.log("No data found or error:", error);
+                        if (error) throw error;
+            
+                        if (data) {
+                            // Cloud data found! Use it.
+                            setMachine(data);
+                        } else {
+                            // 400/404 Fix: If no data exists yet, save the initial template 
+                            // to Supabase right now so it exists for next time.
+                            console.log("No data in cloud, creating initial record...");
+                            await onUpdateMachine(initialMachineData);
+                        }
+                    } catch (err) {
+                        console.error("Database Error:", err.message);
+                    } finally {
+                        setIsLoading(false);
                     }
-                }
+                };
                 fetchData();
             }, []);
 
@@ -1385,6 +1397,7 @@
 </body>
 
 </html>
+
 
 
 
