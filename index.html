@@ -21,6 +21,7 @@
             /* HIDE the Save button, Reference section, Sidebar, and Header */
             header, 
             aside, 
+            nav,
             .print\:hidden, 
             button:not(.bg-indigo-600):not(.bg-red-600):not(.bg-gray-600):not(.bg-green-600),
             .bg-blue-50, /* This usually targets the reference info box */
@@ -827,16 +828,18 @@
                     const originalTitle = document.title;
                     const dateString = new Date().toISOString().split('T')[0];
                     
+                    // 1. Set the PDF filename
                     document.title = `PM-Report-${machine.serialNumber}-${dateString}`;
                     
-                    // Move the state update BEFORE the print call
+                    // 2. Hide the "Save/Edit" UI immediately
                     setIsEditing(false); 
                     
-                    // Add a slightly longer delay to ensure the browser is ready
+                    // 3. WAIT for React to remove the buttons from the screen
+                    // 700ms is the "sweet spot" for most browsers
                     setTimeout(() => {
                         window.print();
                         
-                        // Restore title AFTER the print dialog is handled
+                        // 4. Restore the original website title after a delay
                         setTimeout(() => {
                             document.title = originalTitle;
                         }, 1000);
@@ -1164,33 +1167,19 @@
             // 1. Load data from Supabase when the app opens
             // Locate this in your script tag
             React.useEffect(() => {
-                const fetchData = async () => {
-                    try {
-                        const { data, error } = await supabaseClient
-                            .from('machine_data')
-                            .select('*')
-                            .eq('serialNumber', 'FX000001')
-                            .maybeSingle();
-        
-                        if (error) throw error;
-        
-                        if (data) {
-                            setMachine({
-                                ...data,
-                                // Safety: use initialData if DB arrays are missing
-                                components: Array.isArray(data.components) ? data.components : initialMachineData.components,
-                                maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : []
-                            });
-                        } else {
-                            // If NO data exists in DB yet, save the initial data to the cloud now
-                            onUpdateMachine(initialMachineData);
-                        }
-                    } catch (err) {
-                        console.error("Fetch error:", err.message);
-                    } finally {
-                        setIsLoading(false); // Move this here to ensure it ALWAYS runs
+                async function fetchData() {
+                    const { data, error } = await supabaseClient
+                        .from('machines') // Ensure your table name is 'machines'
+                        .select('*')
+                        .eq('serialNumber', 'FX000001') // Matches your SN
+                        .single();
+            
+                    if (data) {
+                        setMachine(data);
+                    } else if (error) {
+                        console.log("No data found or error:", error);
                     }
-                };
+                }
                 fetchData();
             }, []);
 
@@ -1224,32 +1213,39 @@
              
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                // 1. CRITICAL: Merge the new data with current machine state 
-                // to prevent components/machineType from becoming undefined
-                const updatedMachine = { ...machine, ...newData };
-                setMachine(updatedMachine); 
+                // 1. Use a functional update to ensure we have the absolute latest state
+                setMachine(prevMachine => {
+                    const updatedMachine = { ...prevMachine, ...newData };
             
-                try {
-                    const { error } = await supabaseClient
-                        .from('machine_data')
-                        .upsert({
-                            serialNumber: 'FX000001',
-                            machineType: updatedMachine.machineType || "Fresenius 4008S", 
-                            lastPMDate: updatedMachine.lastPMDate,
-                            nextPMDue: updatedMachine.nextPMDue,
-                            // Ensure we never send NULL to Supabase
-                            components: updatedMachine.components || [],
-                            maintenanceHistory: updatedMachine.maintenanceHistory || [],
-                            faultCode: updatedMachine.faultCode || "",
-                            subFaultCode: updatedMachine.subFaultCode || "",
-                            resolutionCode: updatedMachine.resolutionCode || ""
-                        }, { onConflict: 'serialNumber' });
-                        
-                    if (error) throw error;
-                    console.log("Successfully saved to cloud");
-                } catch (err) {
-                    console.error("Save error:", err.message);
-                }
+                    // 2. Trigger the cloud save inside the state update logic
+                    // using the local 'updatedMachine' variable specifically
+                    const saveToCloud = async (dataToSave) => {
+                        try {
+                            const { error } = await supabaseClient
+                                .from('machine_data')
+                                .upsert({
+                                    serialNumber: 'FX000001',
+                                    machineType: dataToSave.machineType || "Fresenius 4008S",
+                                    lastPMDate: dataToSave.lastPMDate,
+                                    nextPMDue: dataToSave.nextPMDue,
+                                    components: dataToSave.components || [],
+                                    maintenanceHistory: dataToSave.maintenanceHistory || [],
+                                    faultCode: dataToSave.faultCode || "",
+                                    subFaultCode: dataToSave.subFaultCode || "",
+                                    resolutionCode: dataToSave.resolutionCode || ""
+                                }, { onConflict: 'serialNumber' });
+            
+                            if (error) throw error;
+                            console.log("Successfully saved to cloud");
+                        } catch (err) {
+                            console.error("Save error:", err.message);
+                            // Don't alert here to avoid crashing the print callback
+                        }
+                    };
+            
+                    saveToCloud(updatedMachine);
+                    return updatedMachine;
+                });
             };
                     
             // 3. Priority Alarm Logic
@@ -1413,6 +1409,7 @@
 </body>
 
 </html>
+
 
 
 
