@@ -1177,14 +1177,18 @@
                         if (data) {
                             setMachine({
                                 ...data,
+                                // Safety: use initialData if DB arrays are missing
                                 components: Array.isArray(data.components) ? data.components : initialMachineData.components,
-                                maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : initialMachineData.maintenanceHistory
+                                maintenanceHistory: Array.isArray(data.maintenanceHistory) ? data.maintenanceHistory : []
                             });
+                        } else {
+                            // If NO data exists in DB yet, save the initial data to the cloud now
+                            onUpdateMachine(initialMachineData);
                         }
                     } catch (err) {
                         console.error("Fetch error:", err.message);
                     } finally {
-                        setIsLoading(false);
+                        setIsLoading(false); // Move this here to ensure it ALWAYS runs
                     }
                 };
                 fetchData();
@@ -1217,24 +1221,12 @@
         
                 return items.sort((a, b) => new Date(a.date) - new Date(b.date));
             }, [machine]);
-        
-            // 3. Trigger the Pop-up (Now it can find urgentReminders!)
-            React.useEffect(() => {
-                if (machine && urgentReminders?.length > 0 && !hasInitialPopUpShown) {
-                    setShowAlarmPopup(true);
-                    setHasInitialPopUpShown(true);
-                }
-            }, [machine, urgentReminders, hasInitialPopUpShown]);
-        
+             
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
                 // 1. CRITICAL: Merge the new data with current machine state 
                 // to prevent components/machineType from becoming undefined
-                const updatedMachine = {
-                    ...machine, // This keeps the existing components/SN/Type
-                    ...newData  // This applies the new history/dates
-                };
-            
+                const updatedMachine = { ...machine, ...newData };
                 setMachine(updatedMachine); 
             
                 try {
@@ -1248,16 +1240,15 @@
                             // Ensure we never send NULL to Supabase
                             components: updatedMachine.components || [],
                             maintenanceHistory: updatedMachine.maintenanceHistory || [],
-                            faultCode: updatedMachine.faultCode,
-                            subFaultCode: updatedMachine.subFaultCode,
-                            resolutionCode: updatedMachine.resolutionCode
+                            faultCode: updatedMachine.faultCode || "",
+                            subFaultCode: updatedMachine.subFaultCode || "",
+                            resolutionCode: updatedMachine.resolutionCode || ""
                         }, { onConflict: 'serialNumber' });
                         
                     if (error) throw error;
                     console.log("Successfully saved to cloud");
                 } catch (err) {
                     console.error("Save error:", err.message);
-                    alert("Error saving to cloud: " + err.message);
                 }
             };
                     
@@ -1292,10 +1283,12 @@
             }, [machine]);
         
             React.useEffect(() => {
-                if (priorityAlarms && priorityAlarms.length > 0) {
+                // Only show if we have alarms AND it's the first time the app loaded
+                if (priorityAlarms.length > 0 && !hasInitialPopUpShown && !isLoading) {
                     setShowAlarmPopup(true);
+                    setHasInitialPopUpShown(true);
                 }
-            }, [machine, priorityAlarms.length]); // Triggers when machine data arrives
+            }, [priorityAlarms.length, isLoading]); // Depend on isLoading to wait for DB
         
             // Navigation logic
             const handleViewChange = (v) => { 
@@ -1420,6 +1413,7 @@
 </body>
 
 </html>
+
 
 
 
