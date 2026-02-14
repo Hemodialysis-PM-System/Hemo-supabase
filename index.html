@@ -1157,19 +1157,11 @@
                             .eq('serialNumber', 'FX000001')
                             .maybeSingle();
             
-                        if (error) throw error;
-            
                         if (data) {
-                            // Cloud data found! Use it.
-                            setMachine(data);
-                        } else {
-                            // 400/404 Fix: If no data exists yet, save the initial template 
-                            // to Supabase right now so it exists for next time.
-                            console.log("No data in cloud, creating initial record...");
-                            await onUpdateMachine(initialMachineData);
+                            setMachine(data); // Overwrite empty data with Cloud data
+                        } else if (error) {
+                            console.error("Fetch error:", error.message);
                         }
-                    } catch (err) {
-                        console.error("Database Error:", err.message);
                     } finally {
                         setIsLoading(false);
                     }
@@ -1207,16 +1199,16 @@
              
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
-                // 1. Update the local screen immediately
+                // 1. Local state update
                 const updatedMachine = { ...machine, ...newData };
                 setMachine(updatedMachine); 
             
                 try {
-                    // 2. Attempt to save to Cloud
-                    const { data, error } = await supabaseClient
+                    // 2. Database update
+                    const { error } = await supabaseClient
                         .from('machine_data')
                         .upsert({
-                            // Ensure these names match your Supabase column headers exactly
+                            // CHANGE THESE KEYS to match your Supabase column names EXACTLY
                             serialNumber: updatedMachine.serialNumber, 
                             machineType: updatedMachine.machineType,
                             lastPMDate: updatedMachine.lastPMDate,
@@ -1229,14 +1221,11 @@
                         });
             
                     if (error) {
-                        // This log will tell you exactly which column is failing (e.g., "invalid input for type json")
-                        console.error("Supabase Error Details:", error.message, error.details);
-                        throw error;
+                        console.error("Sync Error:", error.message);
+                        // If it still says 400, verify that 'components' and 'maintenanceHistory' are 'jsonb'
                     }
-                    
-                    console.log("Cloud sync successful.");
                 } catch (err) {
-                    alert("Sync Failed: Check browser console (F12) for column errors.");
+                    console.error("Critical Error:", err);
                 }
             };
                                 
@@ -1258,25 +1247,43 @@
                 }
             
                 // Check Components
+                // Inside priorityAlarms useMemo...
+                // Check Components
                 machine.components.forEach(c => {
+                    // If c.expiryDate doesn't exist, calculate it from lastRepairedDate
+                    let targetDate;
                     if (c.expiryDate) {
-                        const diff = new Date(c.expiryDate) - now;
-                        // If the date is in the past (negative) OR within 90 days (positive)
+                        targetDate = new Date(c.expiryDate);
+                    } else if (c.lastRepairedDate) {
+                        targetDate = new Date(c.lastRepairedDate);
+                        targetDate.setFullYear(targetDate.getFullYear() + (c.intervalYears || 4));
+                    }
+                
+                    if (targetDate) {
+                        const diff = targetDate - now;
                         if (diff <= ninetyDays) {
-                            items.push({ label: c.name || c.label, date: c.expiryDate });
+                            items.push({ 
+                                label: c.name || c.label, 
+                                date: targetDate.toISOString().split('T')[0] 
+                            });
                         }
                     }
                 });
                 return items;
             }, [machine]);
         
+            // 3. Updated Alarm Trigger
             React.useEffect(() => {
-                // Only show if we have alarms AND it's the first time the app loaded
-                if (priorityAlarms.length > 0 && !hasInitialPopUpShown && !isLoading) {
+                // We only trigger this if:
+                // 1. We are NOT loading anymore
+                // 2. We actually have machine data (not just initial empty state)
+                // 3. We haven't shown it yet
+                // 4. There are actually items to show
+                if (!isLoading && machine.machineType && !hasInitialPopUpShown && priorityAlarms.length > 0) {
                     setShowAlarmPopup(true);
                     setHasInitialPopUpShown(true);
                 }
-            }, [priorityAlarms.length, isLoading]); // Depend on isLoading to wait for DB
+            }, [isLoading, machine.machineType, priorityAlarms.length, hasInitialPopUpShown]);
         
             // Navigation logic
             const handleViewChange = (v) => { 
@@ -1401,6 +1408,7 @@
 </body>
 
 </html>
+
 
 
 
