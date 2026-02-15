@@ -787,8 +787,11 @@
 
                 // 1. Update the machine state with new PM info
                 const updatedData = {
-                    ...editData,
+                    ...machine, // Use 'machine' to get current global state
+                    ...editData, // Overwrite with what's in the form
                     safetyTestStatus: checklist.safetyTest,
+                    lastPMDate: dateString, // Force the date to today
+                    nextPMDue: new Date(new Date().setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
                     maintenanceHistory: [{
                         id: Date.now(),
                         date: dateString,
@@ -808,8 +811,6 @@
                         report: "", // Leave empty to show the 'Upload' button in History
                         status: checklist.safetyTest || "Pass",      
                     }, ...(machine.maintenanceHistory || [])],
-                    lastPMDate: dateString,
-                    nextPMDue: new Date(new Date().setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0]
                 };
 
                 // 1. FIX PERSISTENCE: Wait for the cloud update to finish
@@ -1215,9 +1216,9 @@
                             nextPMDue: updatedMachine.nextPMDue,
                             components: updatedMachine.components,
                             maintenanceHistory: updatedMachine.maintenanceHistory,
-                            faultCode: updatedMachine.faultCode,
-                            subFaultCode: updatedMachine.subFaultCode,
-                            resolutionCode: updatedMachine.resolutionCode
+                            //faultCode: updatedMachine.faultCode,
+                            //subFaultCode: updatedMachine.subFaultCode,
+                            //resolutionCode: updatedMachine.resolutionCode
                         });
             
                     if (error) {
@@ -1408,6 +1409,7 @@
 </body>
 
 </html>
+
 
 
 
