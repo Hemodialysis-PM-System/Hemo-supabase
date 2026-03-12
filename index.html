@@ -298,7 +298,9 @@
                                                                 ? `${Math.abs(daysVal)} days OVERDUE!` 
                                                                 : `${daysVal} days left`}
                                                         </p>
-                                                        <p className="text-[12px] font-black font-semibold text-gray-600">{formatDate(item.date)}</p>
+                                                        <p className={`text-[12px] font-black font-semibold ${isOverdue ? 'text-red-600' : 'text-gray-600'}`}>
+                                                            {item.date}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             );
@@ -1278,19 +1280,20 @@
                 machine.components.forEach(c => {
                     const dateStr = c.expiryDate || c.lastRepairedDate;
                     if (dateStr) {
-                        let days = calculateDays(dateStr);
-                        
-                        // If it's a repair date, add the interval years manually
+                        // Calculate the actual Next Replacement Date
+                        let nextReplacementDate = new Date(dateStr);
                         if (!c.expiryDate && c.lastRepairedDate) {
-                            const tempDate = new Date(dateStr);
-                            tempDate.setFullYear(tempDate.getFullYear() + (c.intervalYears || 4));
-                            days = calculateDays(tempDate.toISOString().split('T')[0]);
+                            nextReplacementDate.setFullYear(nextReplacementDate.getFullYear() + (c.intervalYears || 4));
                         }
+                        
+                        // Use the calculated date for the alarm
+                        const nextDateString = nextReplacementDate.toISOString().split('T')[0];
+                        const days = calculateDays(nextDateString);
             
                         if (days !== null && days <= 90) {
                             items.push({ 
                                 label: days < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
-                                date: dateStr, // You can use the calculated date here if preferred
+                                date: nextDateString, // <--- THIS is the fix for the date display
                                 daysLeft: days 
                             });
                         }
@@ -1444,6 +1447,7 @@
 </body>
 
 </html>
+
 
 
 
