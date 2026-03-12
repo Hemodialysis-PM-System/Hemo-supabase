@@ -1233,18 +1233,18 @@
             // 3. Priority Alarm Logic
             //pop up alarm that show components overdue or 90 days before deadline
             const priorityAlarms = React.useMemo(() => {
+                // 1. Safety check: If no machine or components, stop here.
                 if (!machine || !machine.components) return [];
                 
-                const ninetyDays = 90 * 24 * 60 * 60 * 1000;
-                now.setHours(0, 0, 0, 0);
                 const now = new Date();
+                now.setHours(0, 0, 0, 0); 
+                const ninetyDays = 90 * 24 * 60 * 60 * 1000;
                 const items = [];
-
-                // 1. Check PM Due date (Safety check: machine.nextPMDue)
+                
+                // 2. Check PM Due date (Only if date exists)
                 if (machine.nextPMDue) {
                     const targetDate = new Date(machine.nextPMDue);
-                    // SAFETY CHECK: Ensure targetDate is valid before calling setHours
-                    if (!isNaN(targetDate)) {
+                    if (!isNaN(targetDate.getTime())) { // Check if valid date
                         targetDate.setHours(0, 0, 0, 0);
                         const diffTime = targetDate - now;
                         const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -1259,20 +1259,17 @@
                     }
                 }
             
-                // 2. Check Components
+                // 3. Check Components (Only if dates exist)
                 machine.components.forEach(c => {
-                    // Find a valid date to check
-                    let dateToVerify = c.expiryDate || c.lastRepairedDate;
-                    
-                    if (dateToVerify) {
-                        const targetDate = new Date(dateToVerify);
+                    const dateStr = c.expiryDate || c.lastRepairedDate;
+                    if (dateStr) {
+                        const targetDate = new Date(dateStr);
                         
-                        // If it's a repair date, add the interval
+                        // If checking repair date, add the interval years
                         if (!c.expiryDate && c.lastRepairedDate) {
                             targetDate.setFullYear(targetDate.getFullYear() + (c.intervalYears || 4));
                         }
             
-                        // SAFETY CHECK: Only proceed if the date is valid
                         if (!isNaN(targetDate.getTime())) {
                             targetDate.setHours(0, 0, 0, 0);
                             const diffTime = targetDate - now;
@@ -1436,6 +1433,7 @@
 </body>
 
 </html>
+
 
 
 
