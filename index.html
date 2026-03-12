@@ -1240,34 +1240,51 @@
                 const now = new Date();
                 const items = [];
 
-                // Check PM Due date
+                // 1. Check PM Due date (Safety check: machine.nextPMDue)
                 if (machine.nextPMDue) {
                     const targetDate = new Date(machine.nextPMDue);
-                    const diffTime = targetDate - now;
-                    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-                    if (diffTime <= ninetyDays) {
-                        items.push({ 
-                            label: days < 0 ? 'PM OVERDUE' : 'PM Due Soon', 
-                            date: machine.nextPMDue,
-                            daysLeft: days 
-                        });
-                    }
-                }
-            
-                // Check Components
-                machine.components.forEach(c => {
-                    if (c.expiryDate) {
-                        const targetDate = new Date(c.expiryDate);
+                    // SAFETY CHECK: Ensure targetDate is valid before calling setHours
+                    if (!isNaN(targetDate)) {
+                        targetDate.setHours(0, 0, 0, 0);
                         const diffTime = targetDate - now;
                         const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
                         if (diffTime <= ninetyDays) {
                             items.push({ 
-                                label: days < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
-                                date: c.expiryDate,
+                                label: days < 0 ? 'PM OVERDUE' : 'PM Due Soon', 
+                                date: machine.nextPMDue,
                                 daysLeft: days 
                             });
+                        }
+                    }
+                }
+            
+                // 2. Check Components
+                machine.components.forEach(c => {
+                    // Find a valid date to check
+                    let dateToVerify = c.expiryDate || c.lastRepairedDate;
+                    
+                    if (dateToVerify) {
+                        const targetDate = new Date(dateToVerify);
+                        
+                        // If it's a repair date, add the interval
+                        if (!c.expiryDate && c.lastRepairedDate) {
+                            targetDate.setFullYear(targetDate.getFullYear() + (c.intervalYears || 4));
+                        }
+            
+                        // SAFETY CHECK: Only proceed if the date is valid
+                        if (!isNaN(targetDate.getTime())) {
+                            targetDate.setHours(0, 0, 0, 0);
+                            const diffTime = targetDate - now;
+                            const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+                            if (diffTime <= ninetyDays) {
+                                items.push({ 
+                                    label: days < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
+                                    date: targetDate.toISOString().split('T')[0],
+                                    daysLeft: days 
+                                });
+                            }
                         }
                     }
                 });
@@ -1419,6 +1436,7 @@
 </body>
 
 </html>
+
 
 
 
