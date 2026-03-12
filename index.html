@@ -154,15 +154,22 @@
             });
         };
         const getDaysRemaining = (dateString) => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time to compare only dates
-            const target = new Date(dateString);
-            target.setHours(0, 0, 0, 0);
+            if (!dateString) return 0;
             
+            // 1. Get today at midnight
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            // 2. Get target date at midnight
+            const targetDate = new Date(dateString);
+            const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+            
+            // 3. Calculate difference
             const diffTime = target - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays;
-        };        
+            
+            // 4. Use Math.round for precise calendar days
+            return Math.round(diffTime / (1000 * 60 * 60 * 24));
+        };       
         //this is a calculation function that subtracts the current date from a target deadline. It returns the number of days remaining, which is used to trigger warnings if a deadline is approaching
 
         //This function generates the main dashboard screen. It takes the machine data and displays the "Device Overview" and the two main deadline cards for PM and Contract renewal
@@ -275,7 +282,7 @@
                                     </div>
                                     <div className="p-2 space-y-2">
                                         {urgentReminders.slice(0, 4).map((item, idx) => {
-                                            const daysVal = getDaysRemaining(machine.nextPMDue);
+                                            const daysVal = getDaysRemaining(item.date);
                                             const isOverdue = daysVal < 0;
 
                                             return (
@@ -288,7 +295,7 @@
                                                     <div className="flex justify-between items-center mt-1.5">
                                                         <p className={`text-[12px] font-bold ${isOverdue ? 'text-red-600' : 'text-green-600'}`}>
                                                             {isOverdue 
-                                                                ? `${Math.abs(daysVal)} days overdue!` 
+                                                                ? `${Math.abs(daysVal)} days OVERDUE!` 
                                                                 : `${daysVal} days left`}
                                                         </p>
                                                         <p className="text-[12px] font-black font-semibold text-gray-600">{formatDate(item.date)}</p>
@@ -1437,6 +1444,7 @@
 </body>
 
 </html>
+
 
 
 
