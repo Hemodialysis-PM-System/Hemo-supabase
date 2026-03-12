@@ -1233,55 +1233,59 @@
             // 3. Priority Alarm Logic
             //pop up alarm that show components overdue or 90 days before deadline
             const priorityAlarms = React.useMemo(() => {
-                // 1. Safety check: If no machine or components, stop here.
                 if (!machine || !machine.components) return [];
                 
+                // 1. Create 'Today' but set time to exactly 00:00:00
                 const now = new Date();
-                now.setHours(0, 0, 0, 0); 
+                const todayAtMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                
                 const ninetyDays = 90 * 24 * 60 * 60 * 1000;
                 const items = [];
                 
-                // 2. Check PM Due date (Only if date exists)
-                if (machine.nextPMDue) {
-                    const targetDate = new Date(machine.nextPMDue);
-                    if (!isNaN(targetDate.getTime())) { // Check if valid date
-                        targetDate.setHours(0, 0, 0, 0);
-                        const diffTime = targetDate - now;
-                        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                // Helper to calculate clean calendar days
+                const calculateDays = (dateString) => {
+                    const target = new Date(dateString);
+                    if (isNaN(target.getTime())) return null;
+                    
+                    // 2. Set Target Date to exactly 00:00:00
+                    const targetAtMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+                    
+                    // 3. Difference in milliseconds / milliseconds in a day
+                    const diffTime = targetAtMidnight - todayAtMidnight;
+                    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+                };
             
-                        if (diffTime <= ninetyDays) {
-                            items.push({ 
-                                label: days < 0 ? 'PM OVERDUE' : 'PM Due Soon', 
-                                date: machine.nextPMDue,
-                                daysLeft: days 
-                            });
-                        }
+                // Check PM Due
+                if (machine.nextPMDue) {
+                    const days = calculateDays(machine.nextPMDue);
+                    if (days !== null && days <= 90) {
+                        items.push({ 
+                            label: days < 0 ? 'PM OVERDUE' : 'PM Due Soon', 
+                            date: machine.nextPMDue,
+                            daysLeft: days 
+                        });
                     }
                 }
             
-                // 3. Check Components (Only if dates exist)
+                // Check Components
                 machine.components.forEach(c => {
                     const dateStr = c.expiryDate || c.lastRepairedDate;
                     if (dateStr) {
-                        const targetDate = new Date(dateStr);
+                        let days = calculateDays(dateStr);
                         
-                        // If checking repair date, add the interval years
+                        // If it's a repair date, add the interval years manually
                         if (!c.expiryDate && c.lastRepairedDate) {
-                            targetDate.setFullYear(targetDate.getFullYear() + (c.intervalYears || 4));
+                            const tempDate = new Date(dateStr);
+                            tempDate.setFullYear(tempDate.getFullYear() + (c.intervalYears || 4));
+                            days = calculateDays(tempDate.toISOString().split('T')[0]);
                         }
             
-                        if (!isNaN(targetDate.getTime())) {
-                            targetDate.setHours(0, 0, 0, 0);
-                            const diffTime = targetDate - now;
-                            const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-                            if (diffTime <= ninetyDays) {
-                                items.push({ 
-                                    label: days < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
-                                    date: targetDate.toISOString().split('T')[0],
-                                    daysLeft: days 
-                                });
-                            }
+                        if (days !== null && days <= 90) {
+                            items.push({ 
+                                label: days < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
+                                date: dateStr, // You can use the calculated date here if preferred
+                                daysLeft: days 
+                            });
                         }
                     }
                 });
@@ -1408,8 +1412,8 @@
                                                 <span className="text-sm font-black text-red-700">{alarm.label}</span>
                                                 <span className="text-sm font-mono font-semibold text-red-600">{alarm.date}</span>
                                             </div>
-                                            {/* Logic is now INSIDE the map */}
-                                            <div className="text-[11px] font-black uppercase tracking-widest text-red-800">
+                                            {/* THE FIX: Use Math.abs so -3 becomes "3 Days Overdue" */}
+                                            <div className={`text-[11px] font-black uppercase tracking-widest ${alarm.daysLeft < 0 ? 'text-red-800' : 'text-orange-700'}`}>
                                                 {alarm.daysLeft < 0 
                                                     ? `⚠️ ${Math.abs(alarm.daysLeft)} Days Overdue` 
                                                     : `⏳ ${alarm.daysLeft} Days Left`}
@@ -1433,6 +1437,7 @@
 </body>
 
 </html>
+
 
 
 
