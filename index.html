@@ -1236,45 +1236,37 @@
                 if (!machine || !machine.components) return [];
                 
                 const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+                now.setHours(0, 0, 0, 0);
                 const now = new Date();
                 const items = [];
 
-                // Helper function to calculate days left
-                const getDaysLeft = (targetDate) => {
-                    const diffTime = new Date(targetDate) - now;
-                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                };
-                
-                // 1. Check PM Due date
+                // Check PM Due date
                 if (machine.nextPMDue) {
-                    const daysLeft = getDaysLeft(machine.nextPMDue);
-                    if (daysLeft <= 90) {
+                    const targetDate = new Date(machine.nextPMDue);
+                    const diffTime = targetDate - now;
+                    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+                    if (diffTime <= ninetyDays) {
                         items.push({ 
-                            label: daysLeft < 0 ? 'EXPIRED' : 'Due Soon', 
+                            label: days < 0 ? 'PM OVERDUE' : 'PM Due Soon', 
                             date: machine.nextPMDue,
-                            daysLeft: daysLeft
+                            daysLeft: days 
                         });
                     }
                 }
             
-                // 2. Check Components
+                // Check Components
                 machine.components.forEach(c => {
-                    let targetDate;
                     if (c.expiryDate) {
-                        targetDate = c.expiryDate;
-                    } else if (c.lastRepairedDate) {
-                        const d = new Date(c.lastRepairedDate);
-                        d.setFullYear(d.getFullYear() + (c.intervalYears || 4));
-                        targetDate = d.toISOString().split('T')[0];
-                    }
+                        const targetDate = new Date(c.expiryDate);
+                        const diffTime = targetDate - now;
+                        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-                    if (targetDate) {
-                        const daysLeft = getDaysLeft(targetDate);
-                        if (daysLeft <= 90) {
+                        if (diffTime <= ninetyDays) {
                             items.push({ 
-                                label: daysLeft < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
-                                date: targetDate,
-                                daysLeft: daysLeft
+                                label: days < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
+                                date: c.expiryDate,
+                                daysLeft: days 
                             });
                         }
                     }
@@ -1397,14 +1389,17 @@
                                 </div>
                                 <div className="space-y-3 mb-6">
                                     {priorityAlarms.map((alarm, i) => (
-                                        <div key={i} className="p-3 bg-red-50 rounded-md border border-red-100 flex justify-between">
-                                            <span className="text-sm font-black text-red-700">{alarm.label}</span>
-                                            <span className="text-sm font-mono font-semibold text-red-600">{alarm.date}</span>
-                                        </div>
-                                        <div className="text-[11px] font-black uppercase tracking-widest text-red-800">
-                                            {alarm.daysLeft < 0 
-                                                ? `⚠️ ${Math.abs(alarm.daysLeft)} Days Overdue` 
-                                                : `⏳ ${alarm.daysLeft} Days Left`}
+                                        <div key={i} className={`p-3 rounded-md border flex flex-col gap-1 ${alarm.daysLeft < 0 ? 'bg-red-100 border-red-300' : 'bg-red-50 border-red-100'}`}>
+                                            <div className="flex justify-between">
+                                                <span className="text-sm font-black text-red-700">{alarm.label}</span>
+                                                <span className="text-sm font-mono font-semibold text-red-600">{alarm.date}</span>
+                                            </div>
+                                            {/* Logic is now INSIDE the map */}
+                                            <div className="text-[11px] font-black uppercase tracking-widest text-red-800">
+                                                {alarm.daysLeft < 0 
+                                                    ? `⚠️ ${Math.abs(alarm.daysLeft)} Days Overdue` 
+                                                    : `⏳ ${alarm.daysLeft} Days Left`}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -1424,6 +1419,7 @@
 </body>
 
 </html>
+
 
 
 
