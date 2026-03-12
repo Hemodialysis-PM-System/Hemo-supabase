@@ -1238,39 +1238,49 @@
                 const ninetyDays = 90 * 24 * 60 * 60 * 1000;
                 const now = new Date();
                 const items = [];
+
+                // Helper function to calculate days left
+                const getDaysLeft = (targetDate) => {
+                    const diffTime = new Date(targetDate) - now;
+                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                };
                 
-                // Check PM Due date
+                // 1. Check PM Due date
                 if (machine.nextPMDue) {
-                    const diff = new Date(machine.nextPMDue) - now;
-                    if (diff <= ninetyDays) {
-                        items.push({ label: 'Preventive Maintenance Due', date: machine.nextPMDue });
+                    const daysLeft = getDaysLeft(machine.nextPMDue);
+                    if (daysLeft <= 90) {
+                        items.push({ 
+                            label: daysLeft < 0 ? 'EXPIRED' : 'Due Soon', 
+                            date: machine.nextPMDue,
+                            daysLeft: daysLeft
+                        });
                     }
                 }
             
-                // Check Components
-                // Inside priorityAlarms useMemo...
-                // Check Components
+                // 2. Check Components
                 machine.components.forEach(c => {
-                    // If c.expiryDate doesn't exist, calculate it from lastRepairedDate
                     let targetDate;
                     if (c.expiryDate) {
-                        targetDate = new Date(c.expiryDate);
+                        targetDate = c.expiryDate;
                     } else if (c.lastRepairedDate) {
-                        targetDate = new Date(c.lastRepairedDate);
-                        targetDate.setFullYear(targetDate.getFullYear() + (c.intervalYears || 4));
+                        const d = new Date(c.lastRepairedDate);
+                        d.setFullYear(d.getFullYear() + (c.intervalYears || 4));
+                        targetDate = d.toISOString().split('T')[0];
                     }
-                
+            
                     if (targetDate) {
-                        const diff = targetDate - now;
-                        if (diff <= ninetyDays) {
+                        const daysLeft = getDaysLeft(targetDate);
+                        if (daysLeft <= 90) {
                             items.push({ 
-                                label: c.name || c.label, 
-                                date: targetDate.toISOString().split('T')[0] 
+                                label: daysLeft < 0 ? `EXPIRED: ${c.name}` : `${c.name} due soon`, 
+                                date: targetDate,
+                                daysLeft: daysLeft
                             });
                         }
                     }
                 });
-                return items;
+            
+                return items.sort((a, b) => a.daysLeft - b.daysLeft);
             }, [machine]);
         
             // 3. Updated Alarm Trigger
@@ -1391,6 +1401,11 @@
                                             <span className="text-sm font-black text-red-700">{alarm.label}</span>
                                             <span className="text-sm font-mono font-semibold text-red-600">{alarm.date}</span>
                                         </div>
+                                        <div className="text-[11px] font-black uppercase tracking-widest text-red-800">
+                                            {alarm.daysLeft < 0 
+                                                ? `⚠️ ${Math.abs(alarm.daysLeft)} Days Overdue` 
+                                                : `⏳ ${alarm.daysLeft} Days Left`}
+                                        </div>
                                     ))}
                                 </div>
                                 <button onClick={() => setShowAlarmPopup(false)} className="w-full bg-gray-900 text-white py-3 rounded-md font-black uppercase tracking-widest text-xs">
@@ -1409,6 +1424,7 @@
 </body>
 
 </html>
+
 
 
 
