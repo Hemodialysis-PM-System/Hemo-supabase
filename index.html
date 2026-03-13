@@ -330,51 +330,35 @@
             };
 
             // --- delete PM history record function ---
-            const handleDelete = async (index) => {
-                if (!window.confirm("Are you sure you want to delete this PM record?")) return;
+            const handleDelete = (index) => {
+                if (window.confirm("Are you sure you want to delete this PM record?")) {
+                    // 1. Remove the item from the list
+                    const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
+                    
+                    // 2. Find the NEW latest PM date from the remaining records
+                    let newLastPM = "";
+                    let newNextPM = "";
             
-                // 1. Get the new history array
-                const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
-                
-                // 2. Find the new "Latest PM" from the remaining history
-                let newLastPM = ""; 
-                let newNextPM = "";
+                    const pmRecords = updatedHistory
+                        .filter(r => r.type && r.type.toLowerCase().includes('pm'))
+                        .sort((a, b) => new Date(b.date) - new Date(a.date));
             
-                const pmRecords = updatedHistory
-                    .filter(r => r.type && r.type.toLowerCase().includes('pm'))
-                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                    if (pmRecords.length > 0) {
+                        newLastPM = pmRecords[0].date; // This will now be Mar 12
+                        const d = new Date(newLastPM);
+                        d.setFullYear(d.getFullYear() + 1);
+                        newNextPM = d.toISOString().split('T')[0];
+                    }
             
-                if (pmRecords.length > 0) {
-                    newLastPM = pmRecords[0].date; // This should find March 12th
-                    const d = new Date(newLastPM);
-                    d.setFullYear(d.getFullYear() + 1);
-                    newNextPM = d.toISOString().split('T')[0];
-                }
-            
-                try {
-                    // 3. Update the Database (Crucial: Update the summary columns!)
-                    const { error } = await supabaseClient
-                        .from('machine_data')
-                        .update({ 
-                            maintenanceHistory: updatedHistory,
-                            lastPMDate: newLastPM, // This fixes the Device Overview
-                            nextPMDue: newNextPM   // This fixes the Notifications
-                        })
-                        .eq('serialNumber', machine.serialNumber);
-            
-                    if (error) throw error;
-            
-                    // 4. Update the local state
+                    // 3. Send EVERYTHING to the parent to save to Supabase
                     onUpdateMachine({
                         ...machine,
                         maintenanceHistory: updatedHistory,
                         lastPMDate: newLastPM,
                         nextPMDue: newNextPM
                     });
-            
-                } catch (err) {
-                    console.error("Sync Error:", err.message);
-                    alert("Failed to sync with database: " + err.message);
+                    
+                    alert("Record removed. Click 'Save to Database' if required, or wait for auto-sync.");
                 }
             };
             
@@ -1462,6 +1446,7 @@
 </body>
 
 </html>
+
 
 
 
