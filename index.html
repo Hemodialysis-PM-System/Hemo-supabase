@@ -260,9 +260,7 @@
                                 <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100 border-t-2 border-t-red-500">
                                     <p className="text-xs font-bold text-gray-500 uppercase mb-1">Last PM Performed</p>
                                     <p className="text-xl font-black text-slate-900">
-                                        {machine.lastPMDate && machine.lastPMDate !== "" 
-                                            ? formatDate(machine.lastPMDate) 
-                                            : "No Records Found"}
+                                        {machine.lastPMDate ? formatDate(machine.lastPMDate) : "No PM Recorded"}
                                     </p>
                                     <p className="text-[11px] text-gray-800 font-bold">Scheduled annually</p>
                                 </div>
@@ -335,7 +333,7 @@
             const handleDelete = async (index) => {
                 if (!window.confirm("Are you sure you want to delete this PM record?")) return;
             
-                // 1. Calculate the new history
+                // 1. Get the new history array
                 const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                 
                 // 2. Find the new "Latest PM" from the remaining history
@@ -347,26 +345,26 @@
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
             
                 if (pmRecords.length > 0) {
-                    newLastPM = pmRecords[0].date; // This will be March 12th
+                    newLastPM = pmRecords[0].date; // This should find March 12th
                     const d = new Date(newLastPM);
                     d.setFullYear(d.getFullYear() + 1);
                     newNextPM = d.toISOString().split('T')[0];
                 }
             
                 try {
-                    // 3. Save ALL three fields to Supabase
+                    // 3. Update the Database (Crucial: Update the summary columns!)
                     const { error } = await supabaseClient
                         .from('machine_data')
                         .update({ 
                             maintenanceHistory: updatedHistory,
-                            lastPMDate: newLastPM,
-                            nextPMDue: newNextPM
+                            lastPMDate: newLastPM, // This fixes the Device Overview
+                            nextPMDue: newNextPM   // This fixes the Notifications
                         })
                         .eq('serialNumber', machine.serialNumber);
             
                     if (error) throw error;
             
-                    // 4. Update the local machine state so the Deadline Card changes immediately
+                    // 4. Update the local state
                     onUpdateMachine({
                         ...machine,
                         maintenanceHistory: updatedHistory,
@@ -1464,6 +1462,7 @@
 </body>
 
 </html>
+
 
 
 
