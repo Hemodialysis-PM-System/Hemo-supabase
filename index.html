@@ -259,8 +259,10 @@
 
                                 <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100 border-t-2 border-t-red-500">
                                     <p className="text-xs font-bold text-gray-500 uppercase mb-1">Last PM Performed</p>
-                                    <p className="text-[14px] font-black text-slate-900">
-                                        {machine.lastPMDate ? formatDate(machine.lastPMDate) : "Pending First PM"}
+                                    <p className="text-xl font-black text-slate-900">
+                                        {machine.lastPMDate && machine.lastPMDate !== "" 
+                                            ? formatDate(machine.lastPMDate) 
+                                            : "No Records Found"}
                                     </p>
                                     <p className="text-[11px] text-gray-800 font-bold">Scheduled annually</p>
                                 </div>
@@ -331,57 +333,50 @@
 
             // --- delete PM history record function ---
             const handleDelete = async (index) => {
-                if (window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) {
-                    // 1. Create the updated history array
-                    const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
-                    
-                    // 2. Recalculate PM dates based on the remaining records
-                    // Using "" instead of null prevents 1970/No Date Set errors
-                    let newLastPMDate = ""; 
-                    let newNextPMDue = "";
-                    
-                    if (updatedHistory.length > 0) {
-                        const pmRecords = updatedHistory
-                            .filter(record => 
-                                record.type && 
-                                record.type.toLowerCase().includes('pm')
-                            )
-                            .sort((a, b) => new Date(b.date) - new Date(a.date));
-                        
-                        if (pmRecords.length > 0) {
-                            newLastPMDate = pmRecords[0].date; // This will find March 12th
-                            const nextDate = new Date(newLastPMDate);
-                            nextDate.setFullYear(nextDate.getFullYear() + 1);
-                            newNextPMDue = nextDate.toISOString().split('T')[0];
-                        }
-                    }
+                if (!window.confirm("Are you sure you want to delete this PM record?")) return;
             
-                    try {
-                        // 3. CRITICAL FIX: Save the changes to Supabase
-                        console.log("Attempting to delete for Serial:", machine.serialNumber);
-                        const { data, error } = await supabaseClient
-                            .from('machine_data')
-                            .update({ maintenanceHistory: updatedHistory })
-                            .eq('serialNumber', machine.serialNumber)
-                            .select(); // Add .select() to see if it actually returns the updated row
-                        
-                        console.log("Database Response:", data);
+                // 1. Calculate the new history
+                const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
+                
+                // 2. Find the new "Latest PM" from the remaining history
+                let newLastPM = ""; 
+                let newNextPM = "";
             
-                        if (error) throw error;
+                const pmRecords = updatedHistory
+                    .filter(r => r.type && r.type.toLowerCase().includes('pm'))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
             
-                        // 4. Update the local app state so the UI reflects changes immediately
-                        onUpdateMachine({ 
-                            ...machine, 
+                if (pmRecords.length > 0) {
+                    newLastPM = pmRecords[0].date; // This will be March 12th
+                    const d = new Date(newLastPM);
+                    d.setFullYear(d.getFullYear() + 1);
+                    newNextPM = d.toISOString().split('T')[0];
+                }
+            
+                try {
+                    // 3. Save ALL three fields to Supabase
+                    const { error } = await supabaseClient
+                        .from('machine_data')
+                        .update({ 
                             maintenanceHistory: updatedHistory,
-                            lastPMDate: newLastPMDate,
-                            nextPMDue: newNextPMDue
-                        });
+                            lastPMDate: newLastPM,
+                            nextPMDue: newNextPM
+                        })
+                        .eq('serialNumber', machine.serialNumber);
             
-                        alert("Record deleted and database updated successfully.");
-                    } catch (err) {
-                        console.error("Delete failed:", err.message);
-                        alert("Error saving to database. Please check your connection.");
-                    }
+                    if (error) throw error;
+            
+                    // 4. Update the local machine state so the Deadline Card changes immediately
+                    onUpdateMachine({
+                        ...machine,
+                        maintenanceHistory: updatedHistory,
+                        lastPMDate: newLastPM,
+                        nextPMDue: newNextPM
+                    });
+            
+                } catch (err) {
+                    console.error("Sync Error:", err.message);
+                    alert("Failed to sync with database: " + err.message);
                 }
             };
             
@@ -1469,6 +1464,7 @@
 </body>
 
 </html>
+
 
 
 
