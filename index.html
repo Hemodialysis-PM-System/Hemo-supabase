@@ -134,25 +134,19 @@
             maintenanceHistory: []
         };
 
-        const formatDate = (dateString) => {
-            // 1. Check if the date exists at all
-            if (!dateString) return "No Date Set"; 
-        
-            const date = new Date(dateString);
-        
-            // 2. Check if the date is actually a valid date object
-            if (isNaN(date.getTime())) {
-                console.error("Invalid date received:", dateString);
-                return "Pending..."; 
-            }
-        
-            // 3. Return the formatted string
+        const formatDate = (dateStr) => {
+            // If date is null or empty, return N/A
+            if (!dateStr) return "No Date Recorded"; 
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return "No Date Recorded";
+            
             return date.toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric'
             });
         };
+        
         const getDaysRemaining = (dateString) => {
             if (!dateString) return 0;
             
@@ -335,39 +329,37 @@
             const handleDelete = async (index) => {
                 if (!window.confirm("Are you sure you want to delete this PM record?")) return;
             
-                // 1. Create the new history array
                 const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                 
-                // 2. Identify the NEW winner for "Last PM"
-                let newLastPM = ""; 
-                let newNextPM = "";
+                // 1. USE null INSTEAD OF "" (This fixes the 400 Error)
+                let newLastPM = null; 
+                let newNextPM = null;
             
                 const pmRecords = updatedHistory
                     .filter(r => r.type && r.type.toLowerCase().includes('pm'))
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
             
                 if (pmRecords.length > 0) {
-                    newLastPM = pmRecords[0].date; // This finds March 12th
+                    newLastPM = pmRecords[0].date;
                     const d = new Date(newLastPM);
                     d.setFullYear(d.getFullYear() + 1);
                     newNextPM = d.toISOString().split('T')[0];
                 }
             
                 try {
-                    // 3. Update the Database - ENSURE NAMES MATCH SUPABASE EXACTLY
-                    const { data, error } = await supabaseClient
+                    // 2. Update Supabase with actual nulls
+                    const { error } = await supabaseClient
                         .from('machine_data') 
                         .update({ 
                             maintenanceHistory: updatedHistory,
-                            lastPMDate: newLastPM, // This updates the Overview Card
-                            nextPMDue: newNextPM    // This updates the Alarms/Notifications
+                            lastPMDate: newLastPM, 
+                            nextPMDue: newNextPM
                         })
-                        .eq('serialNumber', machine.serialNumber)
-                        .select();
+                        .eq('serialNumber', machine.serialNumber);
             
                     if (error) throw error;
             
-                    // 4. Update the local UI state
+                    // 3. Update local UI state
                     onUpdateMachine({
                         ...machine,
                         maintenanceHistory: updatedHistory,
@@ -375,11 +367,11 @@
                         nextPMDue: newNextPM
                     });
                     
-                    console.log("Deleted successfully. New last date:", newLastPM);
+                    alert("Record deleted successfully!");
             
                 } catch (err) {
                     console.error("Delete failed:", err.message);
-                    alert("Could not update database. Check your table name and RLS policies.");
+                    alert("Delete failed: " + err.message);
                 }
             };
             
@@ -1467,6 +1459,7 @@
 </body>
 
 </html>
+
 
 
 
