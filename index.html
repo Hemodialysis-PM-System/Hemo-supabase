@@ -254,7 +254,7 @@
                                 <div className="bg-white p-4 rounded-md shadow-sm border border-gray-100 border-t-2 border-t-red-500">
                                     <p className="text-xs font-bold text-gray-500 uppercase mb-1">Last PM Performed</p>
                                     <p className="text-xl font-black text-slate-900">
-                                        {machine.lastPMDate && machine.lastPMDate !== "" 
+                                        {machine.lastPMDate && machine.lastPMDate !== "1970-01-01" 
                                             ? formatDate(machine.lastPMDate) 
                                             : "No Records Found"}
                                     </p>
@@ -327,12 +327,12 @@
 
             // --- delete PM history record function ---
             const handleDelete = async (index) => {
-                if (!window.confirm("Are you sure you want to delete this PM record?")) return;
+                if (!window.confirm("Are you sure you want to delete this PM record? This cannot be undone.")) return;
             
-                // 1. Filter out the deleted record
+                // 1. Create the new history list
                 const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                 
-                // 2. Recalculate the NEW Latest PM from the remaining history
+                // 2. RECALCULATE: Look through the remaining records to find the most recent PM
                 let newLastPM = null; 
                 let newNextPM = null;
             
@@ -341,7 +341,7 @@
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
             
                 if (pmRecords.length > 0) {
-                    newLastPM = pmRecords[0].date; // Promote the next most recent date
+                    newLastPM = pmRecords[0].date; // This picks Mar 12 if Mar 13 is gone
                     const d = new Date(newLastPM);
                     if (!isNaN(d.getTime())) {
                         d.setFullYear(d.getFullYear() + 1);
@@ -349,13 +349,13 @@
                     }
                 }
             
-                // 3. Send the WHOLE updated object to onUpdateMachine
-                // This ensures lastPMDate and nextPMDue are updated in Supabase
+                // 3. SYNC: Update the main state and the database columns
+                // This fixes Picture 1 (Deadline Cards) and Picture 3 (1970/Missing PM)
                 onUpdateMachine({
                     ...machine,
                     maintenanceHistory: updatedHistory,
-                    lastPMDate: newLastPM, 
-                    nextPMDue: newNextPM   
+                    lastPMDate: newLastPM,
+                    nextPMDue: newNextPM
                 });
             };
             
