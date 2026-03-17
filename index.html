@@ -329,50 +329,36 @@
             const handleDelete = async (index) => {
                 if (!window.confirm("Are you sure you want to delete this PM record?")) return;
             
+                // 1. Create the new history array without the deleted item
                 const updatedHistory = machine.maintenanceHistory.filter((_, i) => i !== index);
                 
-                // 1. USE null INSTEAD OF "" (This fixes the 400 Error)
+                // 2. Recalculate the NEW "Latest PM" from what remains in history
                 let newLastPM = null; 
                 let newNextPM = null;
             
+                // Filter for only PM records and sort by date (newest first)
                 const pmRecords = updatedHistory
                     .filter(r => r.type && r.type.toLowerCase().includes('pm'))
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
             
                 if (pmRecords.length > 0) {
+                    // Find the "new" latest date (e.g., March 12th)
                     newLastPM = pmRecords[0].date;
                     const d = new Date(newLastPM);
-                    d.setFullYear(d.getFullYear() + 1);
-                    newNextPM = d.toISOString().split('T')[0];
+                    if (!isNaN(d.getTime())) {
+                        d.setFullYear(d.getFullYear() + 1);
+                        newNextPM = d.toISOString().split('T')[0];
+                    }
                 }
             
-                try {
-                    // 2. Update Supabase with actual nulls
-                    const { error } = await supabaseClient
-                        .from('machine_data') 
-                        .update({ 
-                            maintenanceHistory: updatedHistory,
-                            lastPMDate: newLastPM, 
-                            nextPMDue: newNextPM
-                        })
-                        .eq('serialNumber', machine.serialNumber);
-            
-                    if (error) throw error;
-            
-                    // 3. Update local UI state
-                    onUpdateMachine({
-                        ...machine,
-                        maintenanceHistory: updatedHistory,
-                        lastPMDate: newLastPM,
-                        nextPMDue: newNextPM
-                    });
-                    
-                    alert("Record deleted successfully!");
-            
-                } catch (err) {
-                    console.error("Delete failed:", err.message);
-                    alert("Delete failed: " + err.message);
-                }
+                // 3. Send the FULLY updated object to onUpdateMachine
+                // This ensures lastPMDate and nextPMDue columns in Supabase actually change
+                onUpdateMachine({
+                    ...machine,
+                    maintenanceHistory: updatedHistory,
+                    lastPMDate: newLastPM, // This updates the Overview Card
+                    nextPMDue: newNextPM    // This updates the Notifications/Sidebar
+                });
             };
             
             const handleRowUpload = async (event, index) => {
@@ -1222,30 +1208,23 @@
             // 2. The function that saves every change to the cloud
             const onUpdateMachine = async (newData) => {
                 // 1. Local state update
+                // Instead of spread, let's use the newData directly if it's a full object
                 const updatedMachine = { ...machine, ...newData };
                 setMachine(updatedMachine); 
             
                 try {
-                    // 2. Database update
                     const { error } = await supabaseClient
                         .from('machine_data')
                         .upsert({
-                            // CHANGE THESE KEYS to match your Supabase column names EXACTLY
                             serialNumber: updatedMachine.serialNumber, 
                             machineType: updatedMachine.machineType,
-                            lastPMDate: updatedMachine.lastPMDate,
-                            nextPMDue: updatedMachine.nextPMDue,
+                            lastPMDate: updatedMachine.lastPMDate, // If this is null, it correctly wipes the '13th Mar'
+                            nextPMDue: updatedMachine.nextPMDue,   // If this is null, it correctly wipes the '13th Mar'
                             components: updatedMachine.components,
-                            maintenanceHistory: updatedMachine.maintenanceHistory,
-                            //faultCode: updatedMachine.faultCode,
-                            //subFaultCode: updatedMachine.subFaultCode,
-                            //resolutionCode: updatedMachine.resolutionCode
+                            maintenanceHistory: updatedMachine.maintenanceHistory
                         });
             
-                    if (error) {
-                        console.error("Sync Error:", error.message);
-                        // If it still says 400, verify that 'components' and 'maintenanceHistory' are 'jsonb'
-                    }
+                    if (error) console.error("Sync Error:", error.message);
                 } catch (err) {
                     console.error("Critical Error:", err);
                 }
