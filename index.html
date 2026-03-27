@@ -1429,16 +1429,24 @@
                                 className="text-[20px] font-black tracking-tight uppercase cursor-pointer hover:text-indigo-600 transition-colors">
                                 Hemodialysis PM System
                             </h1>
-                            {/* ADD THIS DIV HERE */}
-                            <div className="flex items-center gap-4">
+                           
+                            <div className="flex items-center gap-3">
+                                {/* LOGOUT BUTTON */}
                                 <button 
-                                    onClick={handleLogout}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg transition-all border border-slate-200"
+                                    onClick={() => {
+                                        if (window.confirm("Are you sure you want to log out?")) {
+                                            setIsLoggedIn(false);
+                                            // Optional: clear localStorage if you are using it to remember login
+                                            localStorage.removeItem("isLoggedIn");
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-lg transition-all border border-slate-200 group"
                                 >
-                                    <icons.LogOut className="w-4 h-4" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Sign Out</span>
+                                    <icons.LogOut className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Logout</span>
                                 </button>
                     
+                                {/* MOBILE MENU BUTTON */}
                                 <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden p-1">
                                     {isSidebarOpen ? <icons.Close className="w-5 h-5" /> : <icons.Menu className="w-5 h-5" />}
                                 </button>
