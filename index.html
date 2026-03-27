@@ -107,6 +107,13 @@
           Camera: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
           X: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
           Trash: (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>,
+          LogOut: (props) => (
+              <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+          ),
         };
 
         const LoginView = ({ onLogin }) => {
@@ -1390,7 +1397,14 @@
                     setView(prev); 
                 } 
             };
-          
+
+            const handleLogout = () => {
+                if (window.confirm("Are you sure you want to sign out?")) {
+                    setIsLoggedIn(false);
+                    localStorage.removeItem("isLoggedIn"); // Clear the saved session
+                }
+            };
+            
             const navItems = [
                 { id: VIEWS.HOME, label: 'Overview', icon: icons.Home },
                 { id: VIEWS.HISTORY, label: 'PM History', icon: icons.History },
@@ -1415,9 +1429,20 @@
                                 className="text-[20px] font-black tracking-tight uppercase cursor-pointer hover:text-indigo-600 transition-colors">
                                 Hemodialysis PM System
                             </h1>
-                            <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden p-1">
-                                {isSidebarOpen ? <icons.Close className="w-5 h-5" /> : <icons.Menu className="w-5 h-5" />}
-                            </button>
+                            {/* ADD THIS DIV HERE */}
+                            <div className="flex items-center gap-4">
+                                <button 
+                                    onClick={handleLogout}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-lg transition-all border border-slate-200"
+                                >
+                                    <icons.LogOut className="w-4 h-4" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Sign Out</span>
+                                </button>
+                    
+                                <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden p-1">
+                                    {isSidebarOpen ? <icons.Close className="w-5 h-5" /> : <icons.Menu className="w-5 h-5" />}
+                                </button>
+                            </div>
                         </div>
                     </header>
         
