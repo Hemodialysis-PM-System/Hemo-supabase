@@ -123,13 +123,11 @@
         
            const handleSubmit = (e) => {
                 e.preventDefault();
-                // Your credentials
                 if (username === "admin" && password === "12345") {
-                    // Save to browser memory so refresh doesn't log you out
-                    localStorage.setItem("isLoggedIn", "true");
-                    
-                    // This triggers the App to show the dashboard
+                    // 1. Update React state
                     onLogin(); 
+                    // 2. Save to browser memory so refresh doesn't log you out
+                    localStorage.setItem("isLoggedIn", "true");
                 } else {
                     setError("Invalid username or password");
                 }
@@ -1233,13 +1231,10 @@
             const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
             const [isLoading, setIsLoading] = React.useState(true);
             
-            // 1. Check if the user was already logged in from a previous session
+            // This checks if 'isLoggedIn' was saved in the browser memory previously
             const [isLoggedIn, setIsLoggedIn] = React.useState(() => {
                 return localStorage.getItem("isLoggedIn") === "true";
             });
-        
-            // 2. Ensure the view starts at HOME (Device Overview)
-            const [view, setView] = React.useState(VIEWS.HOME);
            
             // 1. Load data from Supabase when the app opens
             // Locate this in your script tag
@@ -1446,14 +1441,10 @@
                                 <button 
                                     onClick={() => {
                                         if (window.confirm("Are you sure you want to log out?")) {
-                                            // 1. Remove the memory
-                                            localStorage.removeItem("isLoggedIn");
-                                            
-                                            // 2. Return to login screen
+                                            // 1. This returns you to the login screen immediately
                                             setIsLoggedIn(false);
-                                            
-                                            // 3. Reset the view to HOME for the next login
-                                            setView(VIEWS.HOME);
+                                            // 2. This deletes the memory so refresh stays on login screen
+                                            localStorage.removeItem("isLoggedIn");
                                         }
                                     }}
                                     className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-lg transition-all border border-slate-200 group"
