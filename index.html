@@ -123,11 +123,13 @@
         
             const handleSubmit = (e) => {
                 e.preventDefault();
-                // SET YOUR CREDENTIALS HERE
                 if (username === "admin" && password === "12345") {
-                    onLogin();
+                    // 1. Update React state
+                    onLogin(); 
+                    // 2. Save to browser memory so refresh doesn't log you out
+                    localStorage.setItem("isLoggedIn", "true");
                 } else {
-                    setError("Invalid username or password");
+                    setError("Invalid credentials");
                 }
             };
         
@@ -1228,7 +1230,11 @@
             const [showAlarmPopup, setShowAlarmPopup] = React.useState(false);
             const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
             const [isLoading, setIsLoading] = React.useState(true);
-            const [isLoggedIn, setIsLoggedIn] = useState(false); // New state
+            
+            // This checks if 'isLoggedIn' was saved in the browser memory previously
+            const [isLoggedIn, setIsLoggedIn] = React.useState(() => {
+                return localStorage.getItem("isLoggedIn") === "true";
+            });
             
             // 1. Load data from Supabase when the app opens
             // Locate this in your script tag
@@ -1435,8 +1441,9 @@
                                 <button 
                                     onClick={() => {
                                         if (window.confirm("Are you sure you want to log out?")) {
+                                            // 1. This returns you to the login screen immediately
                                             setIsLoggedIn(false);
-                                            // Optional: clear localStorage if you are using it to remember login
+                                            // 2. This deletes the memory so refresh stays on login screen
                                             localStorage.removeItem("isLoggedIn");
                                         }
                                     }}
