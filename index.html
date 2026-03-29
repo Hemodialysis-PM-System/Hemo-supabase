@@ -121,7 +121,7 @@
             const [password, setPassword] = useState("");
             const [error, setError] = useState("");
         
-            const handleSubmit = (e) => {
+           const handleSubmit = (e) => {
                 e.preventDefault();
                 // Your credentials
                 if (username === "admin" && password === "12345") {
@@ -134,7 +134,7 @@
                     setError("Invalid username or password");
                 }
             };
-        
+            
             return (
                 <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
                     <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 animate-fadeIn">
@@ -1233,14 +1233,13 @@
             const [hasInitialPopUpShown, setHasInitialPopUpShown] = React.useState(false);
             const [isLoading, setIsLoading] = React.useState(true);
             
-            const App = () => {
-                // 1. Check if the user was already logged in from a previous session
-                const [isLoggedIn, setIsLoggedIn] = React.useState(() => {
-                    return localStorage.getItem("isLoggedIn") === "true";
-                });
-            
-                // 2. Ensure the view starts at HOME (Device Overview)
-                const [view, setView] = React.useState(VIEWS.HOME);
+            // 1. Check if the user was already logged in from a previous session
+            const [isLoggedIn, setIsLoggedIn] = React.useState(() => {
+                return localStorage.getItem("isLoggedIn") === "true";
+            });
+        
+            // 2. Ensure the view starts at HOME (Device Overview)
+            const [view, setView] = React.useState(VIEWS.HOME);
            
             // 1. Load data from Supabase when the app opens
             // Locate this in your script tag
